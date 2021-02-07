@@ -7,17 +7,19 @@ The code is pretty rough but it is functional for importing spells and creatures
 ## Usage
 
 1. At the bottom of the compendium tab there will be a new button: `XML-Import`. Clicking it will open up the dialog box.
-2. change the prefix if you want. Default is `xml`. This will change the compendium it is output to.
-3. Paste the contents of an `xml` the large text box.
+2. Change the prefix if you want. Default is `xml`. This will change the compendium it is output to.
+3. Paste the contents of an `xml` into the large text box.
 4. Use checkboxes for importing spells and/or monsters
 5. Click import
-6. Wait and watch its progress in the console. This can take quite a while depending on the size of the compendiums.
+6. Wait and watch its progress in the console. This can take quite a while depending on the size of the XML.
 
 The only way I know of to stop the importing process once it has started is refreashing.
 
-##Recommendation
+## Recommendation
 
 After creating compendiums I would recommend making it into a [compendium pack](https://foundryvtt.com/article/compendium/). I ran and created a pack on a local instance of foundry then transfered it to the online server.
+
+It took on the order of 30 minutes to complete several hundred monsters.
 
 ## Future Work
 
