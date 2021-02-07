@@ -19,7 +19,7 @@ The only way I know of to stop the importing process once it has started is refr
 
 After creating compendiums I would recommend making it into a [compendium pack](https://foundryvtt.com/article/compendium/). I ran and created a pack on a local instance of foundry then transfered it to the online server.
 
-It took on the order of 30 minutes to complete several hundred monsters.
+It took on the order of **30 minutes** to complete several hundred monsters.
 
 ## Future Work
 
@@ -32,6 +32,11 @@ It took on the order of 30 minutes to complete several hundred monsters.
 * A progress bar/inidicator
 * A stop in progress import button
 * performance increase by using paralellism
+* Get data about Source
+* Use Descriptions of monsters in monster data if availible
+* Cantrip scaling seems incomplete and hard to read depending on the source
+* Verify class spells are correct
+* Make the code more readable
 
 ## Credit
 
