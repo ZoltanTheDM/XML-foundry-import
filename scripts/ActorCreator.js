@@ -325,7 +325,7 @@ class ActorCreator {
     }
     static async createActor(actorJson, pack) {
         // var actorJson = Parser.xmlToJson(actorXml)
-        console.log(actorJson)
+        // console.log(actorJson)
         const props = ActorCreator._makeProps(actorJson);
 
         let img = await ItemCreator._getEntityImageFromCompendium(props.name.toLowerCase(), "Actor");
@@ -369,7 +369,7 @@ class ActorCreator {
 
         ActorCreator.TokenCreator(actor)
 
-        console.log(actor);
+        // console.log(actor);
         await pack.importEntity(actor);
 
         if (!temporary){

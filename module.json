@@ -9,8 +9,8 @@
   "minimumCoreVersion": "0.7.9",
   "compatibleCoreVersion": "0.7.9",
   "system": "dnd5e",
-  "url": "",
-  "manifest": "",
-  "download": "",
+  "url": "https://github.com/ZoltanTheDM/XML-foundry-import",
+  "manifest": "https://github.com/ZoltanTheDM/XML-foundry-import/master/module.json",
+  "download": "https://github.com/ZoltanTheDM/XML-foundry-import/archive/main.zip",
   "changelog": ""
 }
