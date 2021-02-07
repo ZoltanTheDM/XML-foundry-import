@@ -1,0 +1,16 @@
+{
+  "name": "xml-import",
+  "title": "XML import",
+  "description": "",
+  "author": "ZoltanTheDM",
+  "version": "0.5.0",
+  "esmodules": ["scripts/xml-import.js"],
+  "styles": ["styles/style.css"],
+  "minimumCoreVersion": "0.7.9",
+  "compatibleCoreVersion": "0.7.9",
+  "system": "dnd5e",
+  "url": "",
+  "manifest": "",
+  "download": "",
+  "changelog": ""
+}
