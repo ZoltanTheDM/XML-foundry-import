@@ -38,9 +38,11 @@ class ItemCreator {
                 //Ie shield item and spell
                 if (mustBeSpell){
                     //check if compendium contains spells
-                    var item = await pack.getEntry(pack.index[0]._id);
-                    if (item.type == "spell"){
-                        compendiums.push(pack);
+                    if (pack.index.length >= 1){
+                        var item = await pack.getEntry(pack.index[0]._id);
+                        if (item.type == "spell"){
+                            compendiums.push(pack);
+                        }
                     }
                 }
                 else{
