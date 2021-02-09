@@ -38,7 +38,7 @@ class ItemCreator {
                 //Ie shield item and spell
                 if (mustBeSpell){
                     //check if compendium contains spells
-                    if (pack.index.length >= 1){
+                    if (pack?.index?.length && pack.index.length >= 1){
                         var item = await pack.getEntry(pack.index[0]._id);
                         if (item.type == "spell"){
                             compendiums.push(pack);
@@ -133,7 +133,6 @@ class ItemCreator {
             return;
         const spellList = await this._prepareSpellsObject(spells, actor.name);
         for (var spell of spellList){
-            // actor.data.items.push(await Item.create(spell, {'temporary': true, 'displaySheet': false}));
             try {
                 await actor.createOwnedItem(spell);
             }
@@ -212,12 +211,14 @@ class ItemCreator {
      * @private
      */
     _cleanAbilityDamage(abilityData) {
-        if (!abilityData)
-            return abilityData;
+        //if undefined return undefined
+        if (!abilityData){
+            return;
+        }
         abilityData.forEach((ability) => {
             ability.pop();
         });
-        return abilityData;
+        return {parts: abilityData};
     }
     /**
      * Returns a foundry friendly structure for range and target
@@ -351,9 +352,7 @@ class ItemCreator {
                 ability: attack.ability,
                 attackBonus: attack.bonus,
                 actionType: itemData?.data?.actionType,
-                damage: {
-                    parts: this._cleanAbilityDamage(itemData?.['data']?.['damage'])
-                },
+                damage: this._cleanAbilityDamage(itemData?.['data']?.['damage']),
                 save: itemData?.['data']?.['save'],
                 equipped: true,
                 uses: this._getUses(itemData),
