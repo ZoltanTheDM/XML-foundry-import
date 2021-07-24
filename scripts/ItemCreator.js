@@ -38,8 +38,8 @@ class ItemCreator {
                 //Ie shield item and spell
                 if (mustBeSpell){
                     //check if compendium contains spells
-                    if (pack?.index?.length && pack.index.length >= 1){
-                        var item = await pack.getEntry(pack.index[0]._id);
+                    if (pack?.index?.size && pack.index.size >= 1){
+                        var item = pack.index.entries().next().value[1];
                         if (item.type == "spell"){
                             compendiums.push(pack);
                         }
@@ -67,7 +67,7 @@ class ItemCreator {
         for (const compendium of compendiums) {
             let entry = compendium.index.find(e => e.name.toLowerCase() === spellName);
             if (entry) {
-                return await compendium.getEntry(entry._id);
+                return await compendium.getDocument(entry._id);
             }
         }
         console.warn(`${spellName} not found in ${monsterName}`);
@@ -134,7 +134,7 @@ class ItemCreator {
         const spellList = await this._prepareSpellsObject(spells, actor.name);
         for (var spell of spellList){
             try {
-                await actor.createOwnedItem(spell);
+                await actor.createEmbeddedDocuments("Item", [spell.toObject()]);
             }
             catch (e) {
                 Utilts.notificationCreator('error', `There has been an error while creating ${itemName}`);
@@ -147,11 +147,9 @@ class ItemCreator {
         if (!spellsDetails || Object.keys(spellsDetails).length == 0)
             return;
 
-        
         var spells = {}
 
         const compendiums = await this._getCompendiumsType("Item", true);
-        console.log(compendiums)
 
         for (var use_level in spellsDetails){
             var uses = {
@@ -166,23 +164,22 @@ class ItemCreator {
                     per: "day"
                 }
             }
-            // console.log(use_level)
             for (var spell of spellsDetails[use_level]){
-                // console.log(spell)
-                let spellOject = await this._getEntityFromCompendium(compendiums, Parser.trimSpellName(spell), actor.name);
-                // let spellOject = await this._getEntityFromCompendium(compendiums, spell.toLowerCase().trim());
-                if (spellOject){
-                    spellOject.data.uses = uses;
-                    if (spellOject.data.preparation){
-                        spellOject.data.preparation.mode = use_level !== "At will" ? "innate" : "atwill";
+                let spellItem = await this._getEntityFromCompendium(compendiums, Parser.trimSpellName(spell), actor.name);
+
+                if (spellItem){
+                    let spellObject = spellItem.toObject();
+                    spellObject.data.uses = uses;
+                    if (spellObject.data.preparation){
+                        spellObject.data.preparation.mode = use_level !== "At will" ? "innate" : "atwill";
                     }
                     else{
                         console.error("did not have a preperation");
-                        console.error(spellOject);
+                        console.error(spellObject);
                     }
 
                     try {
-                        await actor.createOwnedItem(spellOject);
+                        await actor.createEmbeddedDocuments("Item", [spellObject]);
                     }
                     catch (e) {
                         Utilts.notificationCreator('error', `There has been an error while creating innate spell: ${spellOject.name}`);
@@ -195,14 +192,6 @@ class ItemCreator {
             }
 
         };
-        // console.log(spells);
-        // const spellList = await this._prepareSpellsObject(spells);
-        // for (var spell of spellList){
-        //     spell.type = "feat"
-        //     spell.name = "Innate - " + spell.name
-        //     // console.log(spell);
-        //     actor.data.items.push(await Item.create(spell, {'temporary': true, 'displaySheet': false}));
-        // }
     }
     /**
      * Removes the to hit value from the damage array
@@ -372,7 +361,7 @@ class ItemCreator {
         Object.assign(thisItem.data, this._makeRangeTargetStructure(itemData?.['data']?.['range']));
 
         try {
-            await actor.createOwnedItem(thisItem);
+            await actor.createEmbeddedDocuments("Item", [thisItem]);
         }
         catch (e) {
             Utilts.notificationCreator('error', `There has been an error while creating ${itemName}`);
@@ -389,9 +378,6 @@ class ItemCreator {
     async abilitiesAdder(actor, abilities, actorStats, isReactions) {
         for (const key in abilities) {
             if (abilities.hasOwnProperty(key)){
-                // if (isReactions){
-                //     console.log(key, abilities[key])
-                // }
                 await this.itemCreator(actor, key, abilities[key], actorStats, isReactions);
             }
         }
@@ -834,10 +820,9 @@ class ItemCreator {
             thisSpell.img = img;
         }
 
-        // console.log(thisSpell)
         // await Item.create(thisSpell, { displaySheet: true});
         let item = await Item.create(thisSpell, { temporary: true, displaySheet: false});
-        await pack.importEntity(item);
+        await pack.importDocument(item);
         await pack.getIndex(); // Need to refresh the index to update it
         console.log(`Done importing ${thisSpell.name} into ${pack.collection}`);
     }
