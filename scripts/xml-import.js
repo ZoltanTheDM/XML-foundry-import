@@ -174,7 +174,7 @@ class XmlImporter extends Application
 
     if (pack == null) {
         // Create a new compendium
-        pack = await Compendium.create({
+        pack = await CompendiumCollection.createCompendium({
             name: compendiumName,
             label: compendiumName,
             collection: compendiumName,

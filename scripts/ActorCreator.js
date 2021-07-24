@@ -362,15 +362,17 @@ class ActorCreator {
             await ItemCreator.abilitiesAdder(actor, props.legendaryActions, props.stats, false);
         if (props.reactions)
             await ItemCreator.abilitiesAdder(actor, props.reactions, props.stats, true);
-        if (props.spells)
+        if (props.spells){
             await ItemCreator.spellsAdder(actor, props.spells);
-        if (props.innate)
+        }
+        if (props.innate){
             await ItemCreator.innateAdder(actor, props.innate);
+        }
 
         ActorCreator.TokenCreator(actor)
 
         // console.log(actor);
-        await pack.importEntity(actor);
+        await pack.importDocument(actor);
 
         if (!temporary){
             //delete the actor if it is not temporary
