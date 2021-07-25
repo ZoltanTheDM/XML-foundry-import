@@ -11,9 +11,9 @@ class ClassCreator {
 		if (/Warlock/i.test(cls.name)){
 			return "pact"
 		}
-		if (/Artificer/i.test(cls.name)){
-			return "artificer"
-		}
+		// if (/Artificer/i.test(cls.name)){
+		// 	return "artificer"
+		// }
 
 		var top_slot = cls["autolevel"].find(x => {
 			if (x?.slots){
@@ -160,7 +160,7 @@ class ClassCreator {
 
 		let item = await Item.create(thisClass, { temporary: true, displaySheet: false});
 		// console.log(item);
-		await pack.importEntity(item);
+		await pack.importDocument(item);
 		await pack.getIndex(); // Need to refresh the index to update it
 		console.log(`Done importing ${thisClass.name} into ${pack.collection}`);
 	}
@@ -204,7 +204,7 @@ class ClassCreator {
 
 	    let item = await Item.create(thisClassFeature, { temporary: true, displaySheet: false});
 		// console.log(item);
-	    await pack.importEntity(item);
+	    await pack.importDocument(item);
 	    await pack.getIndex(); // Need to refresh the index to update it
 	    console.log(`Done importing ${thisClassFeature.name} into ${pack.collection}`);
 	}
