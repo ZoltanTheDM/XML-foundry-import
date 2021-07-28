@@ -530,7 +530,7 @@ class ItemCreator {
             vocal: Boolean(match.groups.verbal),
             somatic: Boolean(match.groups.somatic),
             material: Boolean(match.groups.material),
-            ritual: Boolean(spellJson.ritual),
+            ritual: Boolean(/YES/i.test(spellJson.ritual)),
             concentration: Boolean(spellJson.duration.match(/(?<cons>Concentration)/))
         }
     }
