@@ -207,10 +207,13 @@ class ActorCreator {
     static _makeAttributesStructure(propsAttributes, creatureProficiency, abilities) {
         return {
             ac: {
-                value: Number(propsAttributes.armor['AC'])
+                value: Number(propsAttributes.armor['AC']),
+                flat: Number(propsAttributes.armor['AC']),
+                calc: "default",
+                formula: "",
             },
             hp: ActorCreator._makeHpStructure(propsAttributes.hp),
-            speed: propsAttributes.speed,
+            movement: propsAttributes.movement,
             prof: creatureProficiency,
             spellcasting: Parser.shortenAbilities(abilities?.Spellcasting?.data?.modifier)
         };
@@ -295,7 +298,7 @@ class ActorCreator {
                 savingThrowMods: Parser.getSavingThrowMods(actorJson),
                 attributes: {
                     armor: Parser.getCreatureACAndSource(actorJson),
-                    speed: Parser.getCreatureSpeed(actorJson),
+                    movement: Parser.getCreatureSpeed(actorJson),
                     hp: Parser.getCreatureHP(actorJson)
                 },
                 details: {

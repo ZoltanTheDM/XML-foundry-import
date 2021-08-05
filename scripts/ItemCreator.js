@@ -786,6 +786,11 @@ class ItemCreator {
     }
 
     async createSpell(spellJson, pack) {
+        //some are updates, if there is no text ingore it
+        if (!("text" in spellJson)){
+            return;
+        }
+
         let formulas = this._formulas(spellJson)
         let thisSpell = {
             name: this._trimName(spellJson.name),

@@ -151,8 +151,23 @@ class Parser {
      * @param text - markdown text
      */
     static getCreatureSpeed(json) {
-        const speedMatch = json['speed'].match(/([0-9]+ ft.),? ?(.*)?/);
-        return { value: speedMatch[1], special: speedMatch[2] };
+        const speedMatch = json['speed'].matchAll(/(\w+) (\d+) ft\./g);
+
+        let output = {
+            "burrow": 0,
+            "climb": 0,
+            "fly": 0,
+            "swim": 0,
+            "walk": 0,
+            "units": "ft",
+            "hover": false
+        };
+
+        for (let match of speedMatch){
+            output[match[1]] = parseInt(match[2])
+        }
+
+        return output;
     }
 
     static getCreatureTypeAndSource(json) {

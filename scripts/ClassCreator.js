@@ -117,8 +117,6 @@ class ClassCreator {
 
 		var match = skillLine.groups.list.match(/Choose (?<any>any )?(?<count>\w+)(( skills)? from (?<skills>.+))?/);
 
-		// console.log(match)
-
 		if (!match){
 			console.error("failed to get match in skills:")
 			console.error(skillLine, match)
@@ -192,7 +190,7 @@ class ClassCreator {
 			},
 			sort: 100003
 		};
-		// console.log(thisClassFeature);
+		console.log(thisClassFeature);
 
 	    let img = await ItemCreator._getEntityImageFromCompendium(ItemCreator._trimName(thisClassFeature.name).toLowerCase(), "Item");
 
