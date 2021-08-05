@@ -51,6 +51,15 @@ class XmlImporter extends Application
     this.close();
   }
 
+  static ensureArray(val){
+    if (Array.isArray(val)){
+      return val;
+    }
+    else{
+      return [val];
+    }
+  }
+
   static async parseXml(xmlInput, adder, compendiumName) {
     var parser = new DOMParser();
 
@@ -64,25 +73,11 @@ class XmlImporter extends Application
       let class_feature_pack = await XmlImporter.getCompendiumWithType(compendiumName+"-class-features", "Item");
       for (var cls of wholeJson["class"]){
         // console.log(cls)
-        for (var features of cls["autolevel"]){
+        for (let features of ensureArray(cls["autolevel"])){
           // console.log(features)
           if (features.feature){
-            if(Array.isArray(features.feature)){
-              for (var feature of features.feature){
-                var temp = ClassCreator.createClassFeature(feature, cls, features["@attributes"].level, class_feature_pack)
-                if (debug){
-                  await temp;
-                }
-                else{
-                  temp.catch(e => {
-                    console.error("Error in ClassCreator");
-                    console.error(e);
-                  })
-                }
-              }
-            }
-            else{
-              var temp = ClassCreator.createClassFeature(features.feature, cls, features["@attributes"].level, class_feature_pack)
+            for (let feature of ensureArray(features.feature)){
+              var temp = ClassCreator.createClassFeature(feature, cls, features["@attributes"].level, class_feature_pack)
               if (debug){
                 await temp;
               }

@@ -11,9 +11,9 @@ class ClassCreator {
 		if (/Warlock/i.test(cls.name)){
 			return "pact"
 		}
-		if (/Artificer/i.test(cls.name)){
-			return "artificer"
-		}
+		// if (/Artificer/i.test(cls.name)){
+		// 	return "artificer"
+		// }
 
 		var top_slot = cls["autolevel"].find(x => {
 			if (x?.slots){
@@ -117,8 +117,6 @@ class ClassCreator {
 
 		var match = skillLine.groups.list.match(/Choose (?<any>any )?(?<count>\w+)(( skills)? from (?<skills>.+))?/);
 
-		// console.log(match)
-
 		if (!match){
 			console.error("failed to get match in skills:")
 			console.error(skillLine, match)
@@ -160,7 +158,7 @@ class ClassCreator {
 
 		let item = await Item.create(thisClass, { temporary: true, displaySheet: false});
 		// console.log(item);
-		await pack.importEntity(item);
+		await pack.importDocument(item);
 		await pack.getIndex(); // Need to refresh the index to update it
 		console.log(`Done importing ${thisClass.name} into ${pack.collection}`);
 	}
@@ -192,7 +190,7 @@ class ClassCreator {
 			},
 			sort: 100003
 		};
-		// console.log(thisClassFeature);
+		console.log(thisClassFeature);
 
 	    let img = await ItemCreator._getEntityImageFromCompendium(ItemCreator._trimName(thisClassFeature.name).toLowerCase(), "Item");
 
@@ -204,7 +202,7 @@ class ClassCreator {
 
 	    let item = await Item.create(thisClassFeature, { temporary: true, displaySheet: false});
 		// console.log(item);
-	    await pack.importEntity(item);
+	    await pack.importDocument(item);
 	    await pack.getIndex(); // Need to refresh the index to update it
 	    console.log(`Done importing ${thisClassFeature.name} into ${pack.collection}`);
 	}
