@@ -242,12 +242,9 @@ class ActorCreator {
                 calc = 'default'
             }
 
-            console.log(`Add ${items} to items`);
+            // console.log(`Add ${items} to items`);
+            //TODO Remove this global
             ActorCreator.TempArmor = items.map(item => ActorCreator.ArmorData[item])
-            // for (let item of items){
-                // (ActorCreator.ArmorData[item])
-                // console.log(await ItemCreator._getEntityFromCompendium(item, "Item"));
-            // }
         }
 
 
@@ -326,13 +323,17 @@ class ActorCreator {
     static _makeResourcesStructure(propsRes) {
         return {
             legact: {
-                value: propsRes?.numberOfLegendaryActions,
-                max: propsRes?.numberOfLegendaryActions
+                value: propsRes?.legendaryActions?.actions,
+                max: propsRes?.legendaryActions?.actions
             },
             legres: {
                 value: propsRes?.numberOfLegendaryResistances,
                 max: propsRes?.numberOfLegendaryResistances
-            }
+            },
+            lair: {
+                value: !!(propsRes?.legendaryActions?.lair),
+                initiative: propsRes?.legendaryActions?.init,
+            },
         };
     }
 
@@ -383,11 +384,12 @@ class ActorCreator {
      */
     static _makeProps(actorJson) {
         const typeAndSource = Parser.getCreatureTypeAndSource(actorJson);
+        const legend = Parser.getLegendaryActions(actorJson);
         const props = {
             name: Parser.getCreatureName(actorJson),
             abilities: Parser.getAbilities(actorJson),
             reactions: Parser.getReactions(actorJson),
-            legendaryActions: Parser.getLegendaryActions(actorJson),
+            legendaryActions: legend,
             spells: Parser.getSpells(actorJson),
             innate: Parser.getInnateSpells(actorJson),
             stats: Parser.getCreatureStats(actorJson),
@@ -416,7 +418,7 @@ class ActorCreator {
                     skills: Parser.getSkills(actorJson)
                 },
                 resources: {
-                    numberOfLegendaryActions: Parser.getNumberOfLegendaryActions(actorJson),
+                    legendaryActions: legend,
                     numberOfLegendaryResistances: Parser.getNumberOfLegendaryResistances(actorJson)
                 },
                 spellslots: Parser.getSpellSlots(actorJson)
@@ -433,6 +435,7 @@ class ActorCreator {
         const props = ActorCreator._makeProps(actorJson);
 
         // ActorCreator._makeDataStructure(props);
+        // return;
         // console.log(ActorCreator._makeDataStructure(props))
 
         let actor_struct = {
@@ -457,8 +460,19 @@ class ActorCreator {
         // console.log(actor)
         if (props.abilities)
             await ItemCreator.abilitiesAdder(actor, props.abilities, props.stats, false);
-        if (props.legendaryActions)
-            await ItemCreator.abilitiesAdder(actor, props.legendaryActions, props.stats, false);
+        if (props.legendaryActions){
+            if(props.legendaryActions.legend){
+                await ItemCreator.abilitiesAdder(actor, props.legendaryActions.legend, props.stats, false);
+            }
+
+            if(props.legendaryActions.lair){
+                await ItemCreator.abilitiesAdder(actor, props.legendaryActions.lair, props.stats, false);
+            }
+
+            if (props.legendaryActions.region){
+                await ItemCreator.itemCreator(actor, props.legendaryActions.region.name, props.legendaryActions.region, props.stats, false);
+            }
+        }
         if (props.reactions)
             await ItemCreator.abilitiesAdder(actor, props.reactions, props.stats, true);
         if (props.spells){
@@ -523,7 +537,7 @@ class ActorCreator {
                     ActorCreator.ArmorData[item] = data;
                 }
             }
-            console.log(ActorCreator.ArmorData)
+            // console.log(ActorCreator.ArmorData)
         }
     }
 }

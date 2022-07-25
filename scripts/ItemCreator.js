@@ -314,6 +314,9 @@ class ItemCreator {
             activationObject.type = 'legendary';
             activationObject.cost = ability.cost;
         }
+        else if (ability?.type == 'lair'){
+            activationObject.type = 'lair';
+        }
         else if ((ability?.data?.damage?.length !== undefined && ability?.data?.damage?.length !== 0) || ability?.data?.save) {
             activationObject.type = 'action';
             activationObject.cost = 1;

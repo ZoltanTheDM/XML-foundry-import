@@ -693,7 +693,7 @@ class Parser {
         if (json['legendary'] == undefined){
             return []
         }
-        const actionObject = {};
+
         var legendaries = []
         if (Array.isArray(json['legendary'])){
             legendaries = legendaries.concat(json['legendary'])
@@ -702,53 +702,147 @@ class Parser {
             legendaries.push(json['legendary'])
         }
 
-        legendaries.forEach((action) => {
-            //sometimes happens with number of legendary actions
-            if (!action['name'] || Object.keys(action['name']).length == 0){
-                return;
+        /*
+         * Determine what legendary actions exist
+         */
+        let legandaryIndex = legendaries[0].text?.includes("legendary action") ? 0: -1;
+        // let legandaryIndex = legendaries.findIndex(ele => ele.text.includes("legendary actions"));
+
+        //find if lair actions
+        let lairIndex = legendaries.findIndex(ele => ele.name == "Lair Actions");
+
+        //find regional effects
+        let regionalIndex = legendaries.findIndex(ele => ele.name == "Regional Effects");
+
+        if(((legandaryIndex > lairIndex) && legandaryIndex != -1 && lairIndex != -1) ||
+            ((legandaryIndex > regionalIndex) && legandaryIndex != -1 && regionalIndex != -1) ||
+            ((lairIndex > regionalIndex) && lairIndex != -1 && regionalIndex != -1)
+            ){
+            const str = `unable to handle misordered legendary actions Legendary (${legandaryIndex}), Lair (${lairIndex}), Regional (${regionalIndex})`;
+            console.warn(str);
+            ui.notifications['warn'](str);
+            return [];
+        }
+
+        /*
+         * Handle Legendary Actions
+         */
+        const actionObject = {};
+
+
+        if (legandaryIndex != -1){
+            let afterLegend = lairIndex != -1 ? lairIndex : regionalIndex;
+
+            actionObject['legend'] = {};
+
+            let legSlice;
+            if(afterLegend != -1){
+                legSlice = legendaries.slice(legandaryIndex,afterLegend)
+            }
+            else{
+                legSlice = legendaries.slice(legandaryIndex)
             }
 
-            var name = action.name.match(/[^\(]+/)[0].trim();
-
-            let cost_match = action.name.match(/\(Costs (?<cost>\d) Actions\)/);
-
-            //sometimes a legendary action is missing it text.
-            //probably means its text is in the next one
-            //not handled for now because usually is a lair action
-            //or regional effect
-            if (!action.text){
-                return;
+            let actionsMatch = legSlice[0]['text'].match(/can take (?<count>\d+) legendary action/);
+            if (actionsMatch){
+                actionObject['actions'] = Number(actionsMatch.groups['count']);
+            }
+            else{
+                //default to 3
+                actionObject['actions'] = 3;
             }
 
-            var text = Parser.htmlDescription(action.text);
+            legSlice.forEach((action) => {
+                //sometimes happens with number of legendary actions
+                if (!action['name'] || Object.keys(action['name']).length == 0){
+                    return;
+                }
 
-            var cost = 1;
-            if (cost_match){
-                cost = Number(cost_match.groups.cost);
+                var name = action.name.match(/[^\(]+/)[0].trim();
+
+                let cost_match = action.name.match(/\(Costs (?<cost>\d) Actions\)/);
+
+                //sometimes a legendary action is missing it text.
+                //probably means its text is in the next one
+                //not handled for now because usually is a lair action
+                //or regional effect
+                if (!action.text){
+                    return;
+                }
+
+                var text = Parser.htmlDescription(action.text);
+
+                var cost = 1;
+                if (cost_match){
+                    cost = Number(cost_match.groups.cost);
+                }
+
+                actionObject['legend'][name] = {
+                    description: text,
+                    data: Parser.getAttack(text),
+                    cost: cost
+                };
+            });
+        }
+
+
+
+        /*
+         * Handle Lair Actions
+         */
+        if (lairIndex != -1){
+
+            let lairSlice;
+            if (regionalIndex != -1){
+                lairSlice = legendaries.slice(lairIndex+1, regionalIndex);
+            }
+            else{
+                lairSlice = legendaries.slice(lairIndex+1);
             }
 
-            actionObject[name] = {
-                description: text,
-                data: Parser.getAttack(text),
-                cost: cost
-            };
-        });
+            //assumed only one lair action section
+
+            //get first line of text
+            let lairMatch = lairSlice[0]['text'][0].match(/on initiative count (?<count>\d+)/i);
+            if(lairMatch){
+                actionObject['init'] = Number(lairMatch.groups['count']);
+            }
+
+            actionObject['lair'] = {};
+            //assume each row is a lair action
+            lairSlice[0]['text'].slice(1).forEach(function(action, index){
+                if (action.startsWith("• ")){
+                    action = action.substring(2);
+                }
+
+                actionObject['lair'][`Lair Action ${index + 1}`]={
+                    description: action,
+                    data: Parser.getAttack(action),
+                    type: 'lair',
+                }
+            });
+        }
+
+
+        /*
+         * Handle Lair Actions
+         */
+
+        if (regionalIndex != -1){
+            let regionSlice = legendaries.slice(regionalIndex + 1);
+
+            //what if the xml is broken
+            if (regionSlice[0]['text']){
+                //assumed only one regional effect
+                actionObject['region'] = {
+                    name: "Regional Effects",
+                    description:`<p>${regionSlice[0]['text'].join('<p></p>')}</p>`
+                }
+            }
+
+        }
+
         return actionObject;
-    }
-    /**
-     * Returns the number of legendary actions from an actor
-     *
-     * @param text - markdown text
-     */
-    static getNumberOfLegendaryActions(json) {
-        if (json['legendary'] == undefined){
-            return 0;
-        }
-        else{
-            return 3;
-        }
-        // const legendaryActionDescription = text.match(/.* can take ([0-9]+) legendary actions,.*/);
-        // return Number(legendaryActionDescription?.[1]);
     }
     /**
      * Returns the number of legendary resistances from an actor
