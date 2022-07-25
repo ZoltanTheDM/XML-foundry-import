@@ -177,8 +177,8 @@ class Parser {
     }
 
     static getCreatureTypeAndSource(json) {
-        const typeMatch = json['type'].match(/^\s*(?<type>[\w ]+)\s*(\((?<subtype>[^\)]+)\))?\s*(, \s*(?<source>.+))?$/);//\s*(?<subtype>\([^\)]\))?\s*(, )?\s*(?<source>[\w ]+)?$
-        return { type: typeMatch.groups['type'], source: typeMatch.groups['source'] };
+        const typeMatch = json['type'].match(/^\s*(?<type>[\w ]+[\w])\s*(\((?<subtype>[^\)]+)\))?\s*(, \s*(?<source>.+))?$/);//\s*(?<subtype>\([^\)]\))?\s*(, )?\s*(?<source>[\w ]+)?$
+        return { type: typeMatch.groups['type'], source: typeMatch.groups['source'], subtype:typeMatch.groups['subtype'] };
     }
     /**
      * Returns a creature's stats
@@ -1052,6 +1052,16 @@ class Parser {
         )
 
         return itr;
+    }
+
+    static getDescription(actorJson){
+        let text = actorJson['description']
+
+        if (Array.isArray(text)){
+            text = text.join('\n')
+        }
+
+        return `<p>${text.split('\n').join('</p><p>')}</p>`
     }
 
 }

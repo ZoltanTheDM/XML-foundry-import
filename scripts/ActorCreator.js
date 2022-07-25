@@ -161,7 +161,6 @@ class ActorCreator {
             ...ActorCreator._makeResistancesStructure(propsTraits.damageModifiers),
             size: propsTraits.size,
             languages: ActorCreator._makeLanguageStructure(propsTraits),
-            senses: propsTraits.senses['vision']
         };
     }
     /**
@@ -174,13 +173,17 @@ class ActorCreator {
     static _makeDetailsStructure(propsDetails, abilities) {
         return {
             alignment: propsDetails.alignment,
-            type: propsDetails.type,
+            type: {
+                value: propsDetails.type.trim(),
+                subtype: propsDetails.subtype
+            },
             cr: propsDetails.challenge['CR'],
             xp: {
                 value: propsDetails.challenge['XP']
             },
             spellLevel: abilities?.Spellcasting?.data?.level,
-            source: propsDetails.source
+            source: propsDetails.source,
+            "biography.value": propsDetails.description,
         };
     }
     /**
@@ -254,6 +257,47 @@ class ActorCreator {
                 formula: "",
             };
     }
+    static _makeSenses(senses){
+        if (!senses.vision) {
+            return {};
+        }
+
+        let sensesOutput = {
+            "darkvision": 0,
+            "blindsight": 0,
+            "tremorsense": 0,
+            "truesight": 0,
+        }
+
+        let senseList = senses.vision.split(', ')
+
+        //https://stackoverflow.com/questions/11731072/dividing-an-array-by-filter-function
+        //modified to return the original items on failures and the matched regex on success
+        function partitionRegMatch(array, isValid) {
+          return array.reduce(([pass, fail], elem) => {
+            let valid = isValid(elem)
+            return valid ? [[...pass, valid], fail] : [pass, [...fail, elem]];
+          }, [[], []]);
+        }
+
+        let [matches, nonMatch] = partitionRegMatch(senseList, sense => {
+            let match = sense.match(/(?<sight>[\w]+) (?<distance>\d+) ft\./);
+
+            if(!!match && sensesOutput.hasOwnProperty(match.groups['sight'])){
+                return match;
+            }
+            return false;
+        })
+
+        for (let senseMatch of matches){
+            sensesOutput[senseMatch.groups['sight']] = Number(senseMatch.groups['distance']);
+        }
+
+        sensesOutput["units"] = "ft"
+        sensesOutput["special"] = nonMatch.join(', ')
+
+        return sensesOutput
+    }
     /**
      * Returns a foundry friendly structure for the attributes tab
      *
@@ -268,7 +312,8 @@ class ActorCreator {
             hp: ActorCreator._makeHpStructure(propsAttributes.hp),
             movement: propsAttributes.movement,
             prof: creatureProficiency,
-            spellcasting: Parser.shortenAbilities(abilities?.Spellcasting?.data?.modifier)
+            spellcasting: Parser.shortenAbilities(abilities?.Spellcasting?.data?.modifier),
+            senses: ActorCreator._makeSenses(propsAttributes.senses),
         };
     }
     /**
@@ -294,20 +339,17 @@ class ActorCreator {
      * Returns a foundry friendly structure for the data field of the actor
      *
      * @param propsData - an object that contains all the data extracted from the parser
-     * @param creatureProficiency - proficiency of the actor
-     * @param creatureAbilities - abilities object of the actor
-     * @param creatureStats - stats of the actor
      * @private
      */
-    static _makeDataStructure(propsData, creatureProficiency, creatureAbilities, creatureStats) {
+    static _makeDataStructure(props) {
         return {
-            abilities: ActorCreator._makeAbilitiesStructure(creatureStats, propsData.savingThrowMods, creatureProficiency),
-            attributes: ActorCreator._makeAttributesStructure(propsData.attributes, creatureProficiency, creatureAbilities),
-            details: ActorCreator._makeDetailsStructure(propsData.details, creatureAbilities),
-            traits: ActorCreator._makeTraitsStructure(propsData.traits),
-            skills: ActorCreator._makeSkillsStructure(propsData.skills, creatureProficiency),
-            resources: ActorCreator._makeResourcesStructure(propsData.resources),
-            spells: propsData.spellslots
+            abilities: ActorCreator._makeAbilitiesStructure(props.stats, props.data.savingThrowMods, props.data),
+            attributes: ActorCreator._makeAttributesStructure(props.data.attributes, props.data, props.abilities),
+            details: ActorCreator._makeDetailsStructure(props.data.details, props.abilities),
+            traits: ActorCreator._makeTraitsStructure(props.data.traits),
+            skills: ActorCreator._makeSkillsStructure(props.data.skills, props.data),
+            resources: ActorCreator._makeResourcesStructure(props.data.resources),
+            spells: props.data.spellslots,
         };
     }
     static tokenSize = {
@@ -353,18 +395,20 @@ class ActorCreator {
                 attributes: {
                     armor: Parser.getCreatureACAndSource(actorJson),
                     movement: Parser.getCreatureSpeed(actorJson),
-                    hp: Parser.getCreatureHP(actorJson)
+                    senses: Parser.getSenses(actorJson),
+                    hp: Parser.getCreatureHP(actorJson),
                 },
                 details: {
                     alignment: Parser.getCreatureAlignment(actorJson),
                     type: typeAndSource['type'],
+                    subtype: typeAndSource['subtype'],
                     challenge: Parser.getChallenge(actorJson),
-                    source: typeAndSource['source']
+                    source: typeAndSource['source'],
+                    description: Parser.getDescription(actorJson),
                 },
                 traits: {
                     size: Parser.getCreatureSize(actorJson),
                     languages: Parser.getLanguages(actorJson),
-                    senses: Parser.getSenses(actorJson),
                     damageModifiers: Parser.getDamageModifiers(actorJson),
                 },
                 skills: {
@@ -375,21 +419,20 @@ class ActorCreator {
                     numberOfLegendaryResistances: Parser.getNumberOfLegendaryResistances(actorJson)
                 },
                 spellslots: Parser.getSpellSlots(actorJson)
-            }
+            },
         };
         props['proficiency'] = Parser.getProficiencyFromCR(props?.data?.details?.challenge?.CR);
         return props;
     };
 
     static async createActor(actorJson, pack) {
+        // console.log(actorJson);
         await ActorCreator.LoadArmorData();
 
-        // var actorJson = Parser.xmlToJson(actorXml)
-        // console.log(actorJson)
         const props = ActorCreator._makeProps(actorJson);
 
-        // ActorCreator._makeDataStructure(props.data, props.proficiency, props.abilities, props.stats);
-        // console.log(ActorCreator._makeDataStructure(props.data, props.proficiency, props.abilities, props.stats))
+        // ActorCreator._makeDataStructure(props);
+        // console.log(ActorCreator._makeDataStructure(props))
 
         let img = await ItemCreator._getEntityImageFromCompendium(props.name.toLowerCase(), "Actor");
 
@@ -402,7 +445,7 @@ class ActorCreator {
             type: "npc",
             img: img,
             sort: 12000,
-            data: ActorCreator._makeDataStructure(props.data, props.proficiency, props.abilities, props.stats),
+            data: ActorCreator._makeDataStructure(props),
             token: {},
             items: [],
             flags: {},
