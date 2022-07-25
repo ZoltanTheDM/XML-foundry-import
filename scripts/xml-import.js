@@ -151,6 +151,7 @@ class XmlImporter extends Application
         }
       }
     }
+    console.log(Parser.thing);
 
     if (adder.journal){
       let jpack = await XmlImporter.getCompendiumWithType(compendiumName+"-journal", "JournalEntry");
@@ -173,7 +174,7 @@ class XmlImporter extends Application
             name: compendiumName,
             label: compendiumName,
             collection: compendiumName,
-            entity: type
+            type
           });
     }
     // Update pack object

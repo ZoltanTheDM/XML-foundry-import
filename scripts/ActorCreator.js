@@ -195,6 +195,64 @@ class ActorCreator {
             max: Number(propsHP['HP']),
             formula: propsHP['formula']
         };
+    };
+    //https://stackoverflow.com/questions/11731072/dividing-an-array-by-filter-function
+    static _partition(array, isValid) {
+      return array.reduce(([pass, fail], elem) => {
+        return isValid(elem) ? [[...pass, elem], fail] : [pass, [...fail, elem]];
+      }, [[], []]);
+    }
+    /**
+     * Returns a foundry friendly structure for the AC
+     *
+     * @private
+     * @param propsAC - object that contains all the ac data extracted from markdown
+     */
+    static _makeAcStructure(propsAC) {
+        let calc = 'flat';
+
+        //this is stupid that I am using a global
+        ActorCreator.TempArmor = [];
+
+        let valueMod = 0;
+
+        if (!propsAC.Source){
+            calc = 'default'
+        }
+        else{
+
+            let splitList = propsAC.Source.split(',').map(ele => ele.trim());
+            let [items, notItems] = ActorCreator._partition(splitList, ele => ActorCreator.ArmorData.hasOwnProperty(ele))
+
+            propsAC.Source = notItems.join(', ')
+
+            if (propsAC.Source == 'natural armor'){
+                calc = 'natural'
+
+                if (items.includes("shield")){
+                    console.log("shield noticed")
+                    valueMod -= 2
+                }
+            }
+            else if (items){
+                calc = 'default'
+            }
+
+            console.log(`Add ${items} to items`);
+            ActorCreator.TempArmor = items.map(item => ActorCreator.ArmorData[item])
+            // for (let item of items){
+                // (ActorCreator.ArmorData[item])
+                // console.log(await ItemCreator._getEntityFromCompendium(item, "Item"));
+            // }
+        }
+
+
+        return {
+                value: Number(propsAC['AC']) + valueMod,
+                flat: Number(propsAC['AC']) + valueMod,
+                calc: calc,
+                formula: "",
+            };
     }
     /**
      * Returns a foundry friendly structure for the attributes tab
@@ -206,12 +264,7 @@ class ActorCreator {
      */
     static _makeAttributesStructure(propsAttributes, creatureProficiency, abilities) {
         return {
-            ac: {
-                value: Number(propsAttributes.armor['AC']),
-                flat: Number(propsAttributes.armor['AC']),
-                calc: "default",
-                formula: "",
-            },
+            ac: ActorCreator._makeAcStructure(propsAttributes.armor),
             hp: ActorCreator._makeHpStructure(propsAttributes.hp),
             movement: propsAttributes.movement,
             prof: creatureProficiency,
@@ -236,6 +289,7 @@ class ActorCreator {
             }
         };
     }
+
     /**
      * Returns a foundry friendly structure for the data field of the actor
      *
@@ -325,20 +379,23 @@ class ActorCreator {
         };
         props['proficiency'] = Parser.getProficiencyFromCR(props?.data?.details?.challenge?.CR);
         return props;
-    }
+    };
+
     static async createActor(actorJson, pack) {
+        await ActorCreator.LoadArmorData();
+
         // var actorJson = Parser.xmlToJson(actorXml)
         // console.log(actorJson)
         const props = ActorCreator._makeProps(actorJson);
+
+        // ActorCreator._makeDataStructure(props.data, props.proficiency, props.abilities, props.stats);
+        // console.log(ActorCreator._makeDataStructure(props.data, props.proficiency, props.abilities, props.stats))
 
         let img = await ItemCreator._getEntityImageFromCompendium(props.name.toLowerCase(), "Actor");
 
         if (!img){
             img = "icons/svg/mystery-man.svg";
         }
-
-        // console.log(props)
-        // console.log(ActorCreator._makeDataStructure(props.data, props.proficiency, props.abilities, props.stats))
 
         let actor_struct = {
             name: props.name,
@@ -348,7 +405,8 @@ class ActorCreator {
             data: ActorCreator._makeDataStructure(props.data, props.proficiency, props.abilities, props.stats),
             token: {},
             items: [],
-            flags: {}
+            flags: {},
+            folder: "zfFq2hfQkzxQaKNf",
         }
 
         // console.log(actor_struct);
@@ -372,6 +430,15 @@ class ActorCreator {
             await ItemCreator.innateAdder(actor, props.innate);
         }
 
+        if (ActorCreator.TempArmor.length > 0){
+            // console.log(ActorCreator.TempArmor)
+            let res = await actor.createEmbeddedDocuments("Item", ActorCreator.TempArmor);
+
+            //for some reason the items are not equiped when added to sheet
+            //so update the item so it is
+            await actor.updateEmbeddedDocuments("Item", res.map(item => {return {_id: item.id, 'data.equipped':true, 'data.proficient':true, }}));
+        }
+
         ActorCreator.TokenCreator(actor)
 
         // console.log(actor);
@@ -385,6 +452,41 @@ class ActorCreator {
         await pack.getIndex(); // Need to refresh the index to update it
 
         console.log(`Done importing ${props.name} into ${pack.collection}`);
+    }
+
+    static async LoadArmorData(){
+        //Load Armor
+        if (!ActorCreator.ArmorData){
+            //check for equiped armor set
+            const PossibleArmor = new Set([
+                "shield",
+                "leather armor",
+                "studded leather armor",
+                "hide armor",
+                "chain shirt",
+                "chain mail",
+                "scale mail",
+                "ring mail",
+                "half plate armor",
+                "plate armor",
+                "breastplate",
+            ]);
+
+            ActorCreator.ArmorData = {};
+            for (const item of PossibleArmor){
+                let data = await ItemCreator.getItemDataFromCompendium(item, "Item")
+
+                if (!data){
+                    console.warn(`Did not find data for ${item}`);
+                }
+                else{
+                    data.data.equipped = true;
+                    data.data.proficient = true;
+                    ActorCreator.ArmorData[item] = data;
+                }
+            }
+            console.log(ActorCreator.ArmorData)
+        }
     }
 }
 export default ActorCreator;

@@ -116,8 +116,14 @@ class Parser {
      * @param text - markdown text
      */
     static getCreatureACAndSource(json) {
+        let acLine = json['ac'].match(/^(?<AC>\d+)(\s+\((?<Source>[^\)]+)\))?/);
+
+        // console.log(Parser.thing);
+
         return {
-            AC: json['ac'].match(/^(\d+)/)[1],
+            AC: acLine.groups['AC'],
+            Source: acLine.groups['Source'],
+
         }
         
     }

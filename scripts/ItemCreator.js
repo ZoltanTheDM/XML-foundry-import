@@ -30,7 +30,7 @@ class ItemCreator {
         const compendiums = [];
         for (const key of packKeys) {
             const pack = game.packs.get(key);
-            if (pack.metadata.entity == type) {
+            if (pack.documentName == type) {
                 await pack.getIndex();
 
                 //there is some crossover between items
@@ -72,6 +72,19 @@ class ItemCreator {
         }
         console.warn(`${spellName} not found in ${monsterName}`);
         Utilts.notificationCreator('warn', `${spellName} not found`);
+        return;
+    }
+
+    async getItemDataFromCompendium(spellName, type) {
+        let compendiums = await this._getCompendiumsType(type);
+        for (const compendium of compendiums) {
+            let entry = compendium.index.find(e => e.name.toLowerCase() === spellName);
+            if (entry) {
+                return (await compendium.getDocument(entry._id)).data;
+            }
+        }
+
+        // console.warn("no image found for "+spellName)
         return;
     }
 
