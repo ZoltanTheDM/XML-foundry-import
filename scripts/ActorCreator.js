@@ -406,7 +406,7 @@ class ActorCreator {
             token: {},
             items: [],
             flags: {},
-            folder: "zfFq2hfQkzxQaKNf",
+            // folder: "zfFq2hfQkzxQaKNf",
         }
 
         // console.log(actor_struct);
