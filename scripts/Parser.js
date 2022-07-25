@@ -1057,6 +1057,10 @@ class Parser {
     static getDescription(actorJson){
         let text = actorJson['description']
 
+        if (!text){
+            return;
+        }
+
         if (Array.isArray(text)){
             text = text.join('\n')
         }

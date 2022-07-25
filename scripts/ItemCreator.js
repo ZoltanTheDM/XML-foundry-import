@@ -89,6 +89,8 @@ class ItemCreator {
     }
 
     async _getEntityImageFromCompendium(spellName, type) {
+        console.warn("Deprecated _getEntityImageFromCompendium");
+
         let compendiums = await this._getCompendiumsType(type);
         for (const compendium of compendiums) {
             let entry = compendium.index.find(e => e.name.toLowerCase() === spellName);
@@ -177,8 +179,10 @@ class ItemCreator {
                     per: "day"
                 }
             }
-            for (var spell of spellsDetails[use_level]){
-                let spellItem = await this._getEntityFromCompendium(compendiums, Parser.trimSpellName(spell), actor.name);
+
+            async function getSpellData(spell){
+                // let spellItem = await this._getEntityFromCompendium(compendiums, Parser.trimSpellName(spell), actor.name);
+                let spellItem = await Utilts.getSpellData(Parser.trimSpellName(spell), actor.name)
 
                 if (spellItem){
                     let spellObject = spellItem.toObject();
@@ -191,17 +195,22 @@ class ItemCreator {
                         console.error(spellObject);
                     }
 
-                    try {
-                        await actor.createEmbeddedDocuments("Item", [spellObject]);
-                    }
-                    catch (e) {
-                        Utilts.notificationCreator('error', `There has been an error while creating innate spell: ${spellOject.name}`);
-                        console.error(e);
-                    }
+                    return spellObject
                 }
                 else{
                     Utilts.notificationCreator('warn', `${Parser.trimSpellName(spell)} not found`);
                 }
+
+            }
+
+            let spellListLevel = await Promise.all(spellsDetails[use_level].map(getSpellData));
+
+            try {
+                await actor.createEmbeddedDocuments("Item", spellListLevel);
+            }
+            catch (e) {
+                Utilts.notificationCreator('error', `There has been an error while creating innate spell: ${spellOject.name}`);
+                console.error(e);
             }
 
         };
@@ -362,14 +371,7 @@ class ItemCreator {
             },
         };
 
-        let img = await this._getEntityImageFromCompendium(thisItem.name.toLowerCase(), "Item");
-
-        if (img){
-            thisItem.img = img;
-        }
-        else{
-            thisItem.img = "icons/svg/mystery-man.svg";
-        }
+        thisItem.img = Utilts.getImage("Item", thisItem.name);
 
         Object.assign(thisItem.data, this._makeRangeTargetStructure(itemData?.['data']?.['range']));
 
@@ -832,16 +834,12 @@ class ItemCreator {
             sort: 200002
         };
 
-        let img = await this._getEntityImageFromCompendium(this._trimName(thisSpell.name).toLowerCase(), "Item");
-
-        if (img){
-            thisSpell.img = img;
-        }
+        thisSpell.img = Utilts.getImage("Item", this._trimName(thisSpell.name))
 
         // await Item.create(thisSpell, { displaySheet: true});
         let item = await Item.create(thisSpell, { temporary: true, displaySheet: false});
         await pack.importDocument(item);
-        await pack.getIndex(); // Need to refresh the index to update it
+        // await pack.getIndex(); // Need to refresh the index to update it
         console.log(`Done importing ${thisSpell.name} into ${pack.collection}`);
     }
 }

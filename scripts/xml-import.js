@@ -67,6 +67,10 @@ class XmlImporter extends Application
 
     var wholeJson = Parser.xmlToJson(xmlDoc)["compendium"];
 
+    await Utilts.PreloadCompendiumIndex((adder.class || adder.spells || adder.creature), adder.creature);
+    // await Utilts.PreloadCompendiumIndex(true, true);
+    // return
+
     const debug = true;
 
     if (adder.class && wholeJson["class"]){
@@ -136,6 +140,9 @@ class XmlImporter extends Application
         }
       }
     }
+
+    //reload if we added any spells
+    await Utilts.PreloadCompendiumIndex(adder.spells, false);
 
     if (adder.creature && wholeJson["monster"]){
       // Look for compendium

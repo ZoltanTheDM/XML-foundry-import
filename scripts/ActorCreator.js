@@ -1,5 +1,6 @@
 import Parser from "./Parser.js";
 import ItemCreator from "./ItemCreator.js";
+import Utilts from "./Utilts.js";
 class ActorCreator {
     /**
      * Returns the foundry friendly structure for the ability scores
@@ -434,22 +435,16 @@ class ActorCreator {
         // ActorCreator._makeDataStructure(props);
         // console.log(ActorCreator._makeDataStructure(props))
 
-        let img = await ItemCreator._getEntityImageFromCompendium(props.name.toLowerCase(), "Actor");
-
-        if (!img){
-            img = "icons/svg/mystery-man.svg";
-        }
-
         let actor_struct = {
             name: props.name,
             type: "npc",
-            img: img,
+            img: Utilts.getImage("Actor", props.name),
             sort: 12000,
             data: ActorCreator._makeDataStructure(props),
             token: {},
             items: [],
             flags: {},
-            // folder: "zfFq2hfQkzxQaKNf",
+            // folder: "KExLZFbww2G4bns4",
         }
 
         // console.log(actor_struct);
@@ -492,7 +487,7 @@ class ActorCreator {
             actor.delete();
         }
 
-        await pack.getIndex(); // Need to refresh the index to update it
+        // await pack.getIndex(); // Need to refresh the index to update it
 
         console.log(`Done importing ${props.name} into ${pack.collection}`);
     }
