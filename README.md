@@ -19,13 +19,12 @@ The only way I know of to stop the importing process once it has started is refr
 
 After creating compendiums I would recommend making it into a [compendium pack](https://foundryvtt.com/article/compendium/). I ran and created a pack on a local instance of foundry then transfered it to the online server.
 
-It took on the order of **30 minutes** to complete several hundred monsters.
+It took on the order of **15 minutes** to complete several hundred monsters.
 
 ## Future Work
 
 * Import classes and sub-classes
 * Import items
-* `Regional Effects` and `Lair Actions` are not handled.
 * Ordered Compendium Search. For finding spells to add to monsters it would be nice to give a search order. My thought is DAE -> Official SRD -> XML based compendium
 * Import from URL or list of urls
 * For some reason I have been unable to create temporary actors and add them to a compendium. For now they are created and deleted when they are added to the compendium. This deleting breaks if there is an error thrown. Which has led to a bunch of actors created and never deleted...
@@ -33,7 +32,6 @@ It took on the order of **30 minutes** to complete several hundred monsters.
 * A stop in progress import button
 * performance increase by using paralellism
 * Get data about Source
-* Use Descriptions of monsters in monster data if availible
 * Cantrip scaling seems incomplete and hard to read depending on the source
 * Verify class spells are correct
 * Make the code more readable
