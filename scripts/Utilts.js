@@ -107,5 +107,10 @@ class Utilts {
             ui.notifications['warn'](`${name} not found`);
         }
     }
+
+    ensureArray(val){
+        return Array.isArray(val) ? val : [val];
+    }
+
 }
 export default Utilts.getInstance();

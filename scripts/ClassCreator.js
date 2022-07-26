@@ -40,11 +40,24 @@ class ClassCreator {
         //reload items because we added any
         await Utilts.PreloadCompendiumIndex(createFeatures, false);
 
+
+        await ClassCreator.createSubClasses(subclassedList, compendiumCreator);
+    }
+
+    static async createSubClasses(subclassedList, compendiumCreator){
+
         let subclassPack = await compendiumCreator("-subclasses");
 
         for (let singleClass of subclassedList){
 
+            if (singleClass.subclass.length == 0){
+                console.warn(`No known subclasses for ${singleClass.name}`)
+                //TODO gross
+                continue;
+            }
+
             for (let singleSubclass in singleClass.subclass){
+
                 let itermediate = singleClass.subclass[singleSubclass].features.reduce(function(acc, current){
 
                     if (acc[current.level]){
@@ -89,7 +102,6 @@ class ClassCreator {
                 console.log(`Done importing ${singleSubclass} into ${subclassPack.collection}`);
             }
         }
-
     }
 
     static async createClassFeature2(className, interData, pack){
@@ -301,6 +313,8 @@ class ClassCreator {
                 }
             });
 
+            baseClass.autolevel = Utilts.ensureArray(baseClass.autolevel)
+
             return baseClass;
         });
     }
@@ -308,7 +322,10 @@ class ClassCreator {
     static startWithStringFilter(str, classAutoLevel, data=false){
         str = `${str}: `
         let filtered = classAutoLevel.filter(feat => {
-            return feat.feature?.name?.startsWith(str)
+            if (Array.isArray(feat.feature?.name)){
+                return feat.feature.name[0].startsWith(str);
+            }
+            return feat.feature?.name?.startsWith(str);
         });
 
         if(!data){
@@ -316,7 +333,13 @@ class ClassCreator {
         }
         else{
             return filtered.map(feat => {
-                return {name: feat.feature.name.substring(str.length), level: Number(feat['@attributes'].level), description: feat.feature.text}
+                let name = feat.feature.name;
+                if (Array.isArray(feat.feature?.name)){
+                    //TODO do something with the extra names
+                    name = feat.feature.name[0];
+                }
+
+                return {name: name.substring(str.length), level: Number(feat['@attributes'].level), description: feat.feature.text}
             });
         }
     }
@@ -339,7 +362,16 @@ class ClassCreator {
             'Wizard': 'Arcane Tradition',
         }
 
+        //populate 
         for(let oneClass of mergedJson){
+
+            if (!SubclassFeature[oneClass.name]){
+                console.error(`No subclass for ${oneClass.name}`)
+                oneClass.subclass = [];
+
+                //TODO I feel gross
+                continue;
+            }
 
             //list subclasses of class
             const subclassNames = ClassCreator.startWithStringFilter(SubclassFeature[oneClass.name], oneClass.autolevel, true)
@@ -356,7 +388,9 @@ class ClassCreator {
             oneClass.subclass = subClassFeatures;
         }
 
+        //strip subclass features from class features
         for (let oneClass of mergedJson){
+
             let usedFeatures = new Set([].concat(...(Object.keys(oneClass.subclass).map(x => oneClass.subclass[x].features.map(y => `${x}: ${y.name}`)))));
 
             oneClass.autolevel = oneClass.autolevel.reduce((acc, current) => {

@@ -41,7 +41,7 @@ class XmlImporter extends Application
       let inputXML = html.find('[name=all-xml]').val();
       let adder = {
         features: html.find('[name=featuresButton]').is(':checked'),
-        class: html.find('[name=classButton]').is(':checked'),
+        class: html.find('[name=subclassButton]').is(':checked'),
         spells: html.find('[name=spellsButton]').is(':checked'),
         creature: html.find('[name=creatureButton]').is(':checked'),
         journal: html.find('[name=journalButton]').is(':checked'),
@@ -52,16 +52,21 @@ class XmlImporter extends Application
     this.close();
   }
 
-  static ensureArray(val){
-    return Array.isArray(val) ? val : [val];
-  }
-
   static async parseXml(xmlInput, adder, compendiumName) {
-    var parser = new DOMParser();
+    let wholeJson;
+    try{
+      wholeJson =  await XmlImporter.getStringOrUrlJson(xmlInput);
+    }
+    catch(err){
+      const errMsg = `Failed to begin import, Is the text/Url correct?`
+      console.error(errMsg)
+      console.error(err);
+      ui.notifications['error'](errMsg);
 
-    var xmlDoc = parser.parseFromString(xmlInput,"text/xml");
+      return;
+    }
 
-    var wholeJson = Parser.xmlToJson(xmlDoc)["compendium"];
+    // return
 
     // await Utilts.PreloadCompendiumIndex((adder.class || adder.classFeatures || adder.spells || adder.creature), adder.creature);
     await Utilts.PreloadCompendiumIndex();
@@ -77,7 +82,7 @@ class XmlImporter extends Application
       let item_pack = await XmlImporter.getCompendiumWithType(compendiumName+"-spells", "Item");
 
       let start = true;
-      for (var spell of wholeJson["spell"]){
+      for (var spell of Utilts.ensureArray(wholeJson["spell"])){
         //the alphabetically first spell starts with 'Abi'
         // if (!start && spell.name.startsWith("Abi")){
         //   console.log("first spell is "+spell.name);
@@ -113,13 +118,14 @@ class XmlImporter extends Application
       // Look for compendium
       let monster_pack = await XmlImporter.getCompendiumWithType(compendiumName+"-monsters", "Actor");
 
-      for (var monster of wholeJson["monster"]){
+      for (var monster of Utilts.ensureArray(wholeJson["monster"])){
         try {
           await ActorCreator.createActor(monster, monster_pack);
         }
         catch (err){
           Utilts.notificationCreator('error', `Could not import ${monster.name}`);
           console.error(err);
+          return
         }
       }
     }
@@ -133,6 +139,8 @@ class XmlImporter extends Application
         JournalCreator.createJournal(currentNode, jpack)
       }
     }
+
+    ui.notifications['info']("Comleted Import");
   }
 
   static async getCompendiumWithType(compendiumName, type){
@@ -155,6 +163,92 @@ class XmlImporter extends Application
     }
 
     return pack;
+  }
+
+  static async getStringOrUrlJson(input){
+
+
+    if(!XmlImporter.isValidHttpUrl(input)){
+      let parser = new DOMParser();
+      let xmlDoc = parser.parseFromString(input,"text/xml");
+      return Parser.xmlToJson(xmlDoc)['compendium']
+    }
+
+    //we got a url, time to go nuts
+    // const URL_TEST = "https://raw.githubusercontent.com/kinkofer/FightClub5eXML/master/FightClub5eXML/Sources/SystemReferenceDocument/all-srd.xml"
+
+    let level1 = await XmlImporter.fetchXMLfromUrl(input);
+
+    var l1Json = Parser.xmlToJson(level1);
+
+    if (l1Json['compendium']){
+      return l1Json['compendium'];
+    }
+
+    if (!l1Json['collection']){
+      throw "No Compedium or collection";
+    }
+
+    // console.log(l1Json['collection'])
+
+    //build a nw string
+    //brittle as heck
+    let output = await Promise.all(l1Json.collection.doc.map(async function(singleDoc){
+      return await fetch(
+          new URL(singleDoc['@attributes'].href, input)
+        ).then(x => x.text())
+        .then(XmlImporter.removeSomeLines);
+    }));
+
+    output.join('\n')
+
+    const START = "<?xml version='1.0' encoding='utf-8'?>\n<compendium version=\"0\" auto_indent=\"NO\">"
+    const END = "</compendium>"
+
+    var parser = new DOMParser();
+    const fullString = `${START}${output}${END}`;
+
+    // console.log(fullString)
+
+    let xmlDoc = parser.parseFromString(`${START}${output}${END}`,"text/xml");
+    return Parser.xmlToJson(xmlDoc)['compendium']
+
+    // let u = output[0];
+    // let res = await fetch(u).then(x => x.text());
+
+    // for (let singleDoc of l1Json.collection.doc){
+    //   let inputUrl = new URL(singleDoc['@attributes'].href, input);
+
+    // }
+
+
+    // console.log(output)
+
+    // return await XmlImporter.fetchXMLfromUrl(input);
+  }
+
+  static removeSomeLines(str){
+    return str.split('\n').slice(2,-2).join('\n')
+  }
+
+  static async fetchXMLfromUrl(url){
+    var parser = new DOMParser();
+
+    let res = await fetch(url);
+    return parser.parseFromString(await res.text(),"text/xml");
+  }
+
+  //https://stackoverflow.com/questions/5717093/check-if-a-javascript-string-is-a-url
+  static isValidHttpUrl(string) {
+    let url;
+    
+    try {
+      url = new URL(string);
+    } catch (_) {
+      return false;  
+    }
+
+    return url.protocol === "http:" || url.protocol === "https:";
   }
 
 }
