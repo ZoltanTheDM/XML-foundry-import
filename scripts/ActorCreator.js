@@ -212,11 +212,11 @@ class ActorCreator {
      * @private
      * @param propsAC - object that contains all the ac data extracted from markdown
      */
-    static _makeAcStructure(propsAC) {
+    static _makeAcStructure(props, bubbleUp) {
+        const propsAC = props.data.attributes.armor;
         let calc = 'flat';
 
         //this is stupid that I am using a global
-        ActorCreator.TempArmor = [];
 
         let valueMod = 0;
 
@@ -230,7 +230,7 @@ class ActorCreator {
 
             propsAC.Source = notItems.join(', ')
 
-            if (propsAC.Source == 'natural armor'){
+            if (propsAC.Source.startsWith('natural armor')){
                 calc = 'natural'
 
                 if (items.includes("shield")){
@@ -241,20 +241,39 @@ class ActorCreator {
                 calc = 'default'
             }
 
-            // console.log(`Add ${items} to items`);
-            //TODO Remove this global
-            ActorCreator.TempArmor = items.map(item => ActorCreator.ArmorData[item])
+            bubbleUp.itemsOut = items.map(item => ActorCreator.ArmorData[item]);
         }
 
         let acValue = Number(propsAC['AC']) + valueMod;
+
+        //if we are attempting to calculate armor, check that the AC will actually be correct
+        if (calc == 'default'){
+            let armorValue = ActorCreator._calcArmor(props, bubbleUp.itemsOut);
+
+            if (acValue != armorValue){
+                calc = 'flat';
+            }
+        }
 
         return {
                 value: acValue,
                 flat: acValue,
                 calc: calc,
-                formula: "",
             };
     }
+
+    static _calcArmor(props, items){
+        let dexMod = Math.floor((Number(props.stats.Dex) - 10) / 2);
+        let armor = items?.find(item => item.data.armor.type != 'shield');
+
+        let armorValue = armor?.data.armor.value ?? 10;
+        let maxDex = armor?.data.armor.dex ?? 100;
+        let hasShield = !!items?.find(item => item.data.armor.type == 'shield');;
+
+        return armorValue + Math.min(maxDex, dexMod) + (hasShield ? 2 : 0);
+    }
+
+
     static _makeSenses(senses){
         if (!senses.vision) {
             return {};
@@ -299,19 +318,17 @@ class ActorCreator {
     /**
      * Returns a foundry friendly structure for the attributes tab
      *
-     * @param propsAttributes - object containing all the attributes extracted from markdown
-     * @param creatureProficiency - creature's proficiency modifier
-     * @param abilities - abilities object for extracting the spellcaster abilities of the creature
+     * @param propsData - an object that contains all the data extracted from the parser
      * @private
      */
-    static _makeAttributesStructure(propsAttributes, creatureProficiency, abilities) {
+    static _makeAttributesStructure(props, bubbleUp) {
         return {
-            ac: ActorCreator._makeAcStructure(propsAttributes.armor),
-            hp: ActorCreator._makeHpStructure(propsAttributes.hp),
-            movement: propsAttributes.movement,
-            prof: creatureProficiency,
-            spellcasting: Parser.shortenAbilities(abilities?.Spellcasting?.data?.modifier),
-            senses: ActorCreator._makeSenses(propsAttributes.senses),
+            ac: ActorCreator._makeAcStructure(props, bubbleUp),
+            hp: ActorCreator._makeHpStructure(props.data.attributes.hp),
+            movement: props.data.attributes.movement,
+            prof: props.data,
+            spellcasting: Parser.shortenAbilities(props.abilities?.Spellcasting?.data?.modifier),
+            senses: ActorCreator._makeSenses(props.data.attributes.senses),
         };
     }
     /**
@@ -343,10 +360,10 @@ class ActorCreator {
      * @param propsData - an object that contains all the data extracted from the parser
      * @private
      */
-    static _makeDataStructure(props) {
+    static _makeDataStructure(props, bubbleUp) {
         return {
             abilities: ActorCreator._makeAbilitiesStructure(props.stats, props.data.savingThrowMods, props.data),
-            attributes: ActorCreator._makeAttributesStructure(props.data.attributes, props.data, props.abilities),
+            attributes: ActorCreator._makeAttributesStructure(props, bubbleUp),
             details: ActorCreator._makeDetailsStructure(props.data.details, props.abilities),
             traits: ActorCreator._makeTraitsStructure(props.data.traits),
             skills: ActorCreator._makeSkillsStructure(props.data.skills, props.data),
@@ -434,23 +451,24 @@ class ActorCreator {
 
         const props = ActorCreator._makeProps(actorJson);
 
-        // ActorCreator._makeDataStructure(props);
+        let bubbleUp = {};
+
+        // ActorCreator._makeDataStructure(props, bubbleUp);
+        // console.log(ActorCreator._makeDataStructure(props, bubbleUp))
         // return;
-        // console.log(ActorCreator._makeDataStructure(props))
 
         let actor_struct = {
             name: props.name,
             type: "npc",
             img: Utilts.getImage("Actor", props.name),
             sort: 12000,
-            data: ActorCreator._makeDataStructure(props),
+            data: ActorCreator._makeDataStructure(props, bubbleUp),
             token: {},
             items: [],
             flags: {},
             // folder: "KExLZFbww2G4bns4",
         }
 
-        // console.log(actor_struct);
 
         //for some reason I can't add a temporary actor
         //to a compendium...
@@ -482,9 +500,8 @@ class ActorCreator {
             await ItemCreator.innateAdder(actor, props.innate);
         }
 
-        if (ActorCreator.TempArmor.length > 0){
-            // console.log(ActorCreator.TempArmor)
-            let res = await actor.createEmbeddedDocuments("Item", ActorCreator.TempArmor);
+        if (bubbleUp.itemsOut && bubbleUp.itemsOut.length > 0){
+            let res = await actor.createEmbeddedDocuments("Item", bubbleUp.itemsOut);
 
             //for some reason the items are not equiped when added to sheet
             //so update the item so it is

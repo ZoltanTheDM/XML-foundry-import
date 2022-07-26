@@ -176,9 +176,22 @@ class Parser {
         return output;
     }
 
+    //https://stackoverflow.com/questions/4878756/how-to-capitalize-first-letter-of-each-word-like-a-2-word-city
+    //capitalize each word
+    static toTitleCase(text){
+        if (!text){
+            return
+        }
+
+        return text.toLowerCase()
+            .split(' ')
+            .map((s) => s.charAt(0).toUpperCase() + s.substring(1))
+            .join(' ');
+    }
+
     static getCreatureTypeAndSource(json) {
         const typeMatch = json['type'].match(/^\s*(?<type>[\w ]+[\w])\s*(\((?<subtype>[^\)]+)\))?\s*(, \s*(?<source>.+))?$/);//\s*(?<subtype>\([^\)]\))?\s*(, )?\s*(?<source>[\w ]+)?$
-        return { type: typeMatch.groups['type'], source: typeMatch.groups['source'], subtype:typeMatch.groups['subtype'] };
+        return { type: typeMatch.groups['type'], source: typeMatch.groups['source'], subtype: Parser.toTitleCase(typeMatch.groups['subtype']) };
     }
     /**
      * Returns a creature's stats
