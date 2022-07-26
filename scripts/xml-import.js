@@ -66,9 +66,6 @@ class XmlImporter extends Application
       return;
     }
 
-    // return
-
-    // await Utilts.PreloadCompendiumIndex((adder.class || adder.classFeatures || adder.spells || adder.creature), adder.creature);
     await Utilts.PreloadCompendiumIndex();
 
     const debug = true;
@@ -174,9 +171,6 @@ class XmlImporter extends Application
       return Parser.xmlToJson(xmlDoc)['compendium']
     }
 
-    //we got a url, time to go nuts
-    // const URL_TEST = "https://raw.githubusercontent.com/kinkofer/FightClub5eXML/master/FightClub5eXML/Sources/SystemReferenceDocument/all-srd.xml"
-
     let level1 = await XmlImporter.fetchXMLfromUrl(input);
 
     var l1Json = Parser.xmlToJson(level1);
@@ -188,8 +182,6 @@ class XmlImporter extends Application
     if (!l1Json['collection']){
       throw "No Compedium or collection";
     }
-
-    // console.log(l1Json['collection'])
 
     //build a nw string
     //brittle as heck
@@ -212,19 +204,6 @@ class XmlImporter extends Application
 
     let xmlDoc = parser.parseFromString(`${START}${output}${END}`,"text/xml");
     return Parser.xmlToJson(xmlDoc)['compendium']
-
-    // let u = output[0];
-    // let res = await fetch(u).then(x => x.text());
-
-    // for (let singleDoc of l1Json.collection.doc){
-    //   let inputUrl = new URL(singleDoc['@attributes'].href, input);
-
-    // }
-
-
-    // console.log(output)
-
-    // return await XmlImporter.fetchXMLfromUrl(input);
   }
 
   static removeSomeLines(str){
