@@ -86,8 +86,14 @@ class XmlImporter extends Application
 
         if (start){
           const temp = ItemCreator.createSpell(spell, item_pack);
+
           if (debug){
-            await temp;
+            try{
+              await temp;
+            }
+            catch(err){
+              console.error(err);
+            }
           }
           else{
             temp.catch(e => {

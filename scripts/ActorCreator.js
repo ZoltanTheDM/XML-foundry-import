@@ -446,7 +446,6 @@ class ActorCreator {
     };
 
     static async createActor(actorJson, pack) {
-        // console.log(actorJson);
         await ActorCreator.LoadArmorData();
 
         const props = ActorCreator._makeProps(actorJson);

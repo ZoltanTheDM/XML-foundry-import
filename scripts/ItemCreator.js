@@ -434,7 +434,7 @@ class ItemCreator {
     }
 
     _spellDuration(spellJson){
-        var match = spellJson["duration"].match(/((?<cons>Concentration, )?.*((?<number>\d+) (?<unit>(minute|hour|round|day))s?)|(?<inst>Instantaneous)|(?<dispelled>Until dispelled)|(?<special>[Ss]pecial))/)
+        var match = spellJson["duration"].match(/((?<cons>Concentration, )?.*((?<number>(\d+)|(one)) (?<unit>(minute|hour|round|day))s?)|(?<inst>Instantaneous)|(?<dispelled>Until dispelled)|(?<special>[Ss]pecial))/)
         if (!match || !match.groups){
             console.error(spellJson)
             throw "could not figure out duration";
@@ -463,8 +463,12 @@ class ItemCreator {
                 units: "inst"
             }
         }
+
+        //special case for the word one instead of 1
+        let value = match.groups.number == "one" ? 1 : Number(match.groups.number)
+
         return {
-            value: Number(match.groups.number),
+            value,
             units: match.groups.unit
         }
     }

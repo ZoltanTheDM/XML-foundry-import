@@ -42,7 +42,13 @@ class Parser {
         'Constitution': 'con',
         'Intelligence': 'int',
         "Wisdom": 'wis',
-        "Charisma": 'cha'
+        "Charisma": 'cha',
+        'Str': 'str',
+        'Dex': 'dex',
+        'Con': 'con',
+        'Int': 'int',
+        "Wis": 'wis',
+        "Cha": 'cha'
     };
     static _unitMap = {
         'foot': 'ft',
@@ -51,6 +57,7 @@ class Parser {
         'mile': 'mi',
     };
     static _numberMap = {
+        'one': 1,
         'two': 2,
         'three': 3,
         'four': 4,
@@ -223,9 +230,20 @@ class Parser {
         if (json['save'] == undefined || Object.keys(json["save"]).length == 0){
             return savesObject;
         }
-        const savesMatch = [...json['save'].matchAll(/(\w{3}) \+([0-9]+)/g)];
+
+        let saveString;
+
+        if(Array.isArray(json['save'])){
+            saveString = json['save'].join(',');
+        }
+        else{
+            saveString = json['save']
+        }
+
+        const savesMatch = [...saveString.matchAll(/(\w+) \+([0-9]+)/g)];
+
         savesMatch.forEach((save) => {
-            savesObject[save[1]] = Number(save[2]);
+            savesObject[Parser.shortenAbilities(save[1])] = Number(save[2]);
         });
         return savesObject;
     }
@@ -241,7 +259,18 @@ class Parser {
         if (json["skill"] == undefined || Object.keys(json["skill"]).length == 0){
             return skillsObject;
         }
-        const skills = [...json["skill"].matchAll(/(?<name>\w[\w ]+) \+(?<mod>[0-9]+)/g)];
+
+        let skillString;
+
+        if(Array.isArray(json['skill'])){
+            skillString = json['skill'].join(',');
+        }
+        else{
+            skillString = json['skill']
+        }
+
+
+        const skills = [...skillString.matchAll(/(?<name>\w[\w ]+) \+(?<mod>[0-9]+)/g)];
         skills.forEach((skill) => {
             if (Object.keys(Parser._skillsToShortMap).includes(skill.groups['name'])){
                 skillsObject[skill.groups['name']] = Number(skill.groups['mod']);
