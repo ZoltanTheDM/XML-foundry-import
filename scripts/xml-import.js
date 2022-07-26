@@ -40,6 +40,7 @@ class XmlImporter extends Application
     html.find(".import-xml").click(async ev => {
       let inputXML = html.find('[name=all-xml]').val();
       let adder = {
+        features: html.find('[name=featuresButton]').is(':checked'),
         class: html.find('[name=classButton]').is(':checked'),
         spells: html.find('[name=spellsButton]').is(':checked'),
         creature: html.find('[name=creatureButton]').is(':checked'),
@@ -52,12 +53,7 @@ class XmlImporter extends Application
   }
 
   static ensureArray(val){
-    if (Array.isArray(val)){
-      return val;
-    }
-    else{
-      return [val];
-    }
+    return Array.isArray(val) ? val : [val];
   }
 
   static async parseXml(xmlInput, adder, compendiumName) {
@@ -67,50 +63,13 @@ class XmlImporter extends Application
 
     var wholeJson = Parser.xmlToJson(xmlDoc)["compendium"];
 
-    await Utilts.PreloadCompendiumIndex((adder.class || adder.spells || adder.creature), adder.creature);
-    // await Utilts.PreloadCompendiumIndex(true, true);
-    // return
+    // await Utilts.PreloadCompendiumIndex((adder.class || adder.classFeatures || adder.spells || adder.creature), adder.creature);
+    await Utilts.PreloadCompendiumIndex();
 
     const debug = true;
 
-    if (adder.class && wholeJson["class"]){
-      let class_feature_pack = await XmlImporter.getCompendiumWithType(compendiumName+"-class-features", "Item");
-      for (var cls of wholeJson["class"]){
-        // console.log(cls)
-        for (let features of ensureArray(cls["autolevel"])){
-          // console.log(features)
-          if (features.feature){
-            for (let feature of ensureArray(features.feature)){
-              var temp = ClassCreator.createClassFeature(feature, cls, features["@attributes"].level, class_feature_pack)
-              if (debug){
-                await temp;
-              }
-              else{
-                temp.catch(e => {
-                  console.error("Error in ClassCreator");
-                  console.error(e);
-                })
-              }
-            }
-          }
-        }
-      }
-    }
-
-    if (adder.class && wholeJson["class"]){
-      let class_pack = await XmlImporter.getCompendiumWithType(compendiumName+"-classes", "Item");
-      for (var cls of wholeJson["class"]){
-        const temp = ClassCreator.createClass(cls, class_pack)
-        if (debug){
-          await temp;
-        }
-        else{
-          temp.catch(e => {
-            console.error("Error in ClassCreator");
-            console.error(e);
-          })
-        }
-      }
+    if (adder.features || adder.class){
+      ClassCreator.HandleClassCreation(wholeJson, name => XmlImporter.getCompendiumWithType(compendiumName+name, "Item"), adder.features, adder.class)
     }
 
     if (adder.spells && wholeJson["spell"]){

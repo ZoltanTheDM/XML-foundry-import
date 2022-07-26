@@ -15,7 +15,7 @@ class Utilts {
     async PreloadCompendiumIndex(loadItems=true, loadActors=true){
 
         //if we aren't doing any return quickly
-        if (!loadItems || !loadActors){
+        if (!loadItems && !loadActors){
             return;
         }
 
@@ -26,6 +26,7 @@ class Utilts {
         if (loadItems){
             Utilts.itemsImages = {};
             Utilts.spellList = {};
+            Utilts.feats = {};
         }
 
         for(let comp of game.packs.contents){
@@ -53,6 +54,10 @@ class Utilts {
                         //name to uuid
                         Utilts.spellList[currentValue.name.toLowerCase()] = `Compendium.${comp.collection}.${currentValue._id}`
                     }
+
+                    if (loadItems && currentValue.type == "feat"){
+                        Utilts.feats[currentValue.name.toLowerCase()] = `Compendium.${comp.collection}.${currentValue._id}`
+                    }
                 })
 
             }
@@ -74,11 +79,31 @@ class Utilts {
     }
 
     async getSpellData(name, monsterName="???"){
-        if (Utilts.spellList.hasOwnProperty(name)){
-            return fromUuid(Utilts.spellList[name])
+        if (Utilts.spellList.hasOwnProperty(name.toLowerCase())){
+            return fromUuid(Utilts.spellList[name.toLowerCase()])
         }
         else{
             console.warn(`${name} not found in ${monsterName}`);
+            ui.notifications['warn'](`${name} not found`);
+        }
+    }
+
+    async getFeatData(name, featTop="???"){
+        if (Utilts.feats.hasOwnProperty(name.toLowerCase())){
+            return fromUuid(Utilts.feats[name.toLowerCase()])
+        }
+        else{
+            console.warn(`${name} not found in ${featTop}`);
+            ui.notifications['warn'](`${name} not found`);
+        }
+    }
+    
+    getFeatUuid(name, featTop="???"){
+        if (Utilts.feats.hasOwnProperty(name.toLowerCase())){
+            return Utilts.feats[name.toLowerCase()]
+        }
+        else{
+            console.warn(`${name} not found in ${featTop}`);
             ui.notifications['warn'](`${name} not found`);
         }
     }

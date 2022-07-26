@@ -234,7 +234,6 @@ class ActorCreator {
                 calc = 'natural'
 
                 if (items.includes("shield")){
-                    console.log("shield noticed")
                     valueMod -= 2
                 }
             }
@@ -247,10 +246,11 @@ class ActorCreator {
             ActorCreator.TempArmor = items.map(item => ActorCreator.ArmorData[item])
         }
 
+        let acValue = Number(propsAC['AC']) + valueMod;
 
         return {
-                value: Number(propsAC['AC']) + valueMod,
-                flat: Number(propsAC['AC']) + valueMod,
+                value: acValue,
+                flat: acValue,
                 calc: calc,
                 formula: "",
             };
