@@ -179,11 +179,7 @@ class Parser {
     //https://stackoverflow.com/questions/4878756/how-to-capitalize-first-letter-of-each-word-like-a-2-word-city
     //capitalize each word
     static toTitleCase(text){
-        if (!text){
-            return
-        }
-
-        return text.toLowerCase()
+        return text?.toLowerCase()
             .split(' ')
             .map((s) => s.charAt(0).toUpperCase() + s.substring(1))
             .join(' ');
