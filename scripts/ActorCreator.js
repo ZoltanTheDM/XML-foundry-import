@@ -1,5 +1,6 @@
 import Parser from "./Parser.js";
 import ItemCreator from "./ItemCreator.js";
+import Utilts from "./Utilts.js";
 class ActorCreator {
     /**
      * Returns the foundry friendly structure for the ability scores
@@ -161,7 +162,6 @@ class ActorCreator {
             ...ActorCreator._makeResistancesStructure(propsTraits.damageModifiers),
             size: propsTraits.size,
             languages: ActorCreator._makeLanguageStructure(propsTraits),
-            senses: propsTraits.senses['vision']
         };
     }
     /**
@@ -174,13 +174,17 @@ class ActorCreator {
     static _makeDetailsStructure(propsDetails, abilities) {
         return {
             alignment: propsDetails.alignment,
-            type: propsDetails.type,
+            type: {
+                value: propsDetails.type.trim(),
+                subtype: propsDetails.subtype
+            },
             cr: propsDetails.challenge['CR'],
             xp: {
                 value: propsDetails.challenge['XP']
             },
             spellLevel: abilities?.Spellcasting?.data?.level,
-            source: propsDetails.source
+            source: propsDetails.source,
+            "biography.value": propsDetails.description,
         };
     }
     /**
@@ -195,27 +199,136 @@ class ActorCreator {
             max: Number(propsHP['HP']),
             formula: propsHP['formula']
         };
+    };
+    //https://stackoverflow.com/questions/11731072/dividing-an-array-by-filter-function
+    static _partition(array, isValid) {
+      return array.reduce(([pass, fail], elem) => {
+        return isValid(elem) ? [[...pass, elem], fail] : [pass, [...fail, elem]];
+      }, [[], []]);
+    }
+    /**
+     * Returns a foundry friendly structure for the AC
+     *
+     * @private
+     * @param propsAC - object that contains all the ac data extracted from markdown
+     */
+    static _makeAcStructure(props, bubbleUp) {
+        const propsAC = props.data.attributes.armor;
+        let calc = 'flat';
+
+        //this is stupid that I am using a global
+
+        let valueMod = 0;
+
+        if (!propsAC.Source){
+            calc = 'default'
+        }
+        else{
+
+            let splitList = propsAC.Source.split(',').map(ele => ele.trim());
+            let [items, notItems] = ActorCreator._partition(splitList, ele => ActorCreator.ArmorData.hasOwnProperty(ele))
+
+            propsAC.Source = notItems.join(', ')
+
+            if (propsAC.Source.startsWith('natural armor')){
+                calc = 'natural'
+
+                if (items.includes("shield")){
+                    valueMod -= 2
+                }
+            }
+            else if (items){
+                calc = 'default'
+            }
+
+            bubbleUp.itemsOut = items.map(item => ActorCreator.ArmorData[item]);
+        }
+
+        let acValue = Number(propsAC['AC']) + valueMod;
+
+        //if we are attempting to calculate armor, check that the AC will actually be correct
+        if (calc == 'default'){
+            let armorValue = ActorCreator._calcArmor(props, bubbleUp.itemsOut);
+
+            if (acValue != armorValue){
+                calc = 'flat';
+            }
+        }
+
+        return {
+                value: acValue,
+                flat: acValue,
+                calc: calc,
+            };
+    }
+
+    static _calcArmor(props, items){
+        let dexMod = Math.floor((Number(props.stats.Dex) - 10) / 2);
+        let armor = items?.find(item => item.data.armor.type != 'shield');
+
+        let armorValue = armor?.data.armor.value ?? 10;
+        let maxDex = armor?.data.armor.dex ?? 100;
+        let hasShield = !!items?.find(item => item.data.armor.type == 'shield');;
+
+        return armorValue + Math.min(maxDex, dexMod) + (hasShield ? 2 : 0);
+    }
+
+
+    static _makeSenses(senses){
+        if (!senses.vision) {
+            return {};
+        }
+
+        let sensesOutput = {
+            "darkvision": 0,
+            "blindsight": 0,
+            "tremorsense": 0,
+            "truesight": 0,
+        }
+
+        let senseList = senses.vision.split(', ')
+
+        //https://stackoverflow.com/questions/11731072/dividing-an-array-by-filter-function
+        //modified to return the original items on failures and the matched regex on success
+        function partitionRegMatch(array, isValid) {
+          return array.reduce(([pass, fail], elem) => {
+            let valid = isValid(elem)
+            return valid ? [[...pass, valid], fail] : [pass, [...fail, elem]];
+          }, [[], []]);
+        }
+
+        let [matches, nonMatch] = partitionRegMatch(senseList, sense => {
+            let match = sense.match(/(?<sight>[\w]+) (?<distance>\d+) ft\./);
+
+            if(!!match && sensesOutput.hasOwnProperty(match.groups['sight'])){
+                return match;
+            }
+            return false;
+        })
+
+        for (let senseMatch of matches){
+            sensesOutput[senseMatch.groups['sight']] = Number(senseMatch.groups['distance']);
+        }
+
+        sensesOutput["units"] = "ft"
+        sensesOutput["special"] = nonMatch.join(', ')
+
+        return sensesOutput
     }
     /**
      * Returns a foundry friendly structure for the attributes tab
      *
-     * @param propsAttributes - object containing all the attributes extracted from markdown
-     * @param creatureProficiency - creature's proficiency modifier
-     * @param abilities - abilities object for extracting the spellcaster abilities of the creature
+     * @param propsData - an object that contains all the data extracted from the parser
      * @private
      */
-    static _makeAttributesStructure(propsAttributes, creatureProficiency, abilities) {
+    static _makeAttributesStructure(props, bubbleUp) {
         return {
-            ac: {
-                value: Number(propsAttributes.armor['AC']),
-                flat: Number(propsAttributes.armor['AC']),
-                calc: "default",
-                formula: "",
-            },
-            hp: ActorCreator._makeHpStructure(propsAttributes.hp),
-            movement: propsAttributes.movement,
-            prof: creatureProficiency,
-            spellcasting: Parser.shortenAbilities(abilities?.Spellcasting?.data?.modifier)
+            ac: ActorCreator._makeAcStructure(props, bubbleUp),
+            hp: ActorCreator._makeHpStructure(props.data.attributes.hp),
+            movement: props.data.attributes.movement,
+            prof: props.data,
+            spellcasting: Parser.shortenAbilities(props.abilities?.Spellcasting?.data?.modifier),
+            senses: ActorCreator._makeSenses(props.data.attributes.senses),
         };
     }
     /**
@@ -227,33 +340,35 @@ class ActorCreator {
     static _makeResourcesStructure(propsRes) {
         return {
             legact: {
-                value: propsRes?.numberOfLegendaryActions,
-                max: propsRes?.numberOfLegendaryActions
+                value: propsRes?.legendaryActions?.actions,
+                max: propsRes?.legendaryActions?.actions
             },
             legres: {
                 value: propsRes?.numberOfLegendaryResistances,
                 max: propsRes?.numberOfLegendaryResistances
-            }
+            },
+            lair: {
+                value: !!(propsRes?.legendaryActions?.lair),
+                initiative: propsRes?.legendaryActions?.init,
+            },
         };
     }
+
     /**
      * Returns a foundry friendly structure for the data field of the actor
      *
      * @param propsData - an object that contains all the data extracted from the parser
-     * @param creatureProficiency - proficiency of the actor
-     * @param creatureAbilities - abilities object of the actor
-     * @param creatureStats - stats of the actor
      * @private
      */
-    static _makeDataStructure(propsData, creatureProficiency, creatureAbilities, creatureStats) {
+    static _makeDataStructure(props, bubbleUp) {
         return {
-            abilities: ActorCreator._makeAbilitiesStructure(creatureStats, propsData.savingThrowMods, creatureProficiency),
-            attributes: ActorCreator._makeAttributesStructure(propsData.attributes, creatureProficiency, creatureAbilities),
-            details: ActorCreator._makeDetailsStructure(propsData.details, creatureAbilities),
-            traits: ActorCreator._makeTraitsStructure(propsData.traits),
-            skills: ActorCreator._makeSkillsStructure(propsData.skills, creatureProficiency),
-            resources: ActorCreator._makeResourcesStructure(propsData.resources),
-            spells: propsData.spellslots
+            abilities: ActorCreator._makeAbilitiesStructure(props.stats, props.data.savingThrowMods, props.data),
+            attributes: ActorCreator._makeAttributesStructure(props, bubbleUp),
+            details: ActorCreator._makeDetailsStructure(props.data.details, props.abilities),
+            traits: ActorCreator._makeTraitsStructure(props.data.traits),
+            skills: ActorCreator._makeSkillsStructure(props.data.skills, props.data),
+            resources: ActorCreator._makeResourcesStructure(props.data.resources),
+            spells: props.data.spellslots,
         };
     }
     static tokenSize = {
@@ -286,11 +401,12 @@ class ActorCreator {
      */
     static _makeProps(actorJson) {
         const typeAndSource = Parser.getCreatureTypeAndSource(actorJson);
+        const legend = Parser.getLegendaryActions(actorJson);
         const props = {
             name: Parser.getCreatureName(actorJson),
             abilities: Parser.getAbilities(actorJson),
             reactions: Parser.getReactions(actorJson),
-            legendaryActions: Parser.getLegendaryActions(actorJson),
+            legendaryActions: legend,
             spells: Parser.getSpells(actorJson),
             innate: Parser.getInnateSpells(actorJson),
             stats: Parser.getCreatureStats(actorJson),
@@ -299,59 +415,59 @@ class ActorCreator {
                 attributes: {
                     armor: Parser.getCreatureACAndSource(actorJson),
                     movement: Parser.getCreatureSpeed(actorJson),
-                    hp: Parser.getCreatureHP(actorJson)
+                    senses: Parser.getSenses(actorJson),
+                    hp: Parser.getCreatureHP(actorJson),
                 },
                 details: {
                     alignment: Parser.getCreatureAlignment(actorJson),
                     type: typeAndSource['type'],
+                    subtype: typeAndSource['subtype'],
                     challenge: Parser.getChallenge(actorJson),
-                    source: typeAndSource['source']
+                    source: typeAndSource['source'],
+                    description: Parser.getDescription(actorJson),
                 },
                 traits: {
                     size: Parser.getCreatureSize(actorJson),
                     languages: Parser.getLanguages(actorJson),
-                    senses: Parser.getSenses(actorJson),
                     damageModifiers: Parser.getDamageModifiers(actorJson),
                 },
                 skills: {
                     skills: Parser.getSkills(actorJson)
                 },
                 resources: {
-                    numberOfLegendaryActions: Parser.getNumberOfLegendaryActions(actorJson),
+                    legendaryActions: legend,
                     numberOfLegendaryResistances: Parser.getNumberOfLegendaryResistances(actorJson)
                 },
                 spellslots: Parser.getSpellSlots(actorJson)
-            }
+            },
         };
         props['proficiency'] = Parser.getProficiencyFromCR(props?.data?.details?.challenge?.CR);
         return props;
-    }
+    };
+
     static async createActor(actorJson, pack) {
-        // var actorJson = Parser.xmlToJson(actorXml)
-        // console.log(actorJson)
+        await ActorCreator.LoadArmorData();
+
         const props = ActorCreator._makeProps(actorJson);
 
-        let img = await ItemCreator._getEntityImageFromCompendium(props.name.toLowerCase(), "Actor");
+        let bubbleUp = {};
 
-        if (!img){
-            img = "icons/svg/mystery-man.svg";
-        }
-
-        // console.log(props)
-        // console.log(ActorCreator._makeDataStructure(props.data, props.proficiency, props.abilities, props.stats))
+        // ActorCreator._makeDataStructure(props, bubbleUp);
+        // console.log(ActorCreator._makeDataStructure(props, bubbleUp))
+        // return;
 
         let actor_struct = {
             name: props.name,
             type: "npc",
-            img: img,
+            img: Utilts.getImage("Actor", props.name),
             sort: 12000,
-            data: ActorCreator._makeDataStructure(props.data, props.proficiency, props.abilities, props.stats),
+            data: ActorCreator._makeDataStructure(props, bubbleUp),
             token: {},
             items: [],
-            flags: {}
+            flags: {},
+            // folder: "KExLZFbww2G4bns4",
         }
 
-        // console.log(actor_struct);
 
         //for some reason I can't add a temporary actor
         //to a compendium...
@@ -361,8 +477,19 @@ class ActorCreator {
         // console.log(actor)
         if (props.abilities)
             await ItemCreator.abilitiesAdder(actor, props.abilities, props.stats, false);
-        if (props.legendaryActions)
-            await ItemCreator.abilitiesAdder(actor, props.legendaryActions, props.stats, false);
+        if (props.legendaryActions){
+            if(props.legendaryActions.legend){
+                await ItemCreator.abilitiesAdder(actor, props.legendaryActions.legend, props.stats, false);
+            }
+
+            if(props.legendaryActions.lair){
+                await ItemCreator.abilitiesAdder(actor, props.legendaryActions.lair, props.stats, false);
+            }
+
+            if (props.legendaryActions.region){
+                await ItemCreator.itemCreator(actor, props.legendaryActions.region.name, props.legendaryActions.region, props.stats, false);
+            }
+        }
         if (props.reactions)
             await ItemCreator.abilitiesAdder(actor, props.reactions, props.stats, true);
         if (props.spells){
@@ -370,6 +497,14 @@ class ActorCreator {
         }
         if (props.innate){
             await ItemCreator.innateAdder(actor, props.innate);
+        }
+
+        if (bubbleUp.itemsOut && bubbleUp.itemsOut.length > 0){
+            let res = await actor.createEmbeddedDocuments("Item", bubbleUp.itemsOut);
+
+            //for some reason the items are not equiped when added to sheet
+            //so update the item so it is
+            await actor.updateEmbeddedDocuments("Item", res.map(item => {return {_id: item.id, 'data.equipped':true, 'data.proficient':true, }}));
         }
 
         ActorCreator.TokenCreator(actor)
@@ -382,9 +517,43 @@ class ActorCreator {
             actor.delete();
         }
 
-        await pack.getIndex(); // Need to refresh the index to update it
+        // await pack.getIndex(); // Need to refresh the index to update it
 
         console.log(`Done importing ${props.name} into ${pack.collection}`);
+    }
+
+    static async LoadArmorData(){
+        //Load Armor
+        if (!ActorCreator.ArmorData){
+            //check for equiped armor set
+            const PossibleArmor = new Set([
+                "shield",
+                "leather armor",
+                "studded leather armor",
+                "hide armor",
+                "chain shirt",
+                "chain mail",
+                "scale mail",
+                "ring mail",
+                "half plate armor",
+                "plate armor",
+                "breastplate",
+            ]);
+
+            ActorCreator.ArmorData = {};
+            for (const item of PossibleArmor){
+                let data = (await Utilts.getItemData(item)).data
+
+                if (!data){
+                    console.warn(`Did not find data for ${item}`);
+                }
+                else{
+                    data.data.equipped = true;
+                    data.data.proficient = true;
+                    ActorCreator.ArmorData[item] = data;
+                }
+            }
+        }
     }
 }
 export default ActorCreator;

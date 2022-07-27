@@ -4,6 +4,8 @@ import ClassCreator from "./ClassCreator.js";
 import JournalCreator from "./JournalCreator.js";
 import Parser from './Parser.js'
 import Utilts from "./Utilts.js";
+import CompendiumManagement from "./CompendiumManagement.js";
+import CompendiumUI from './compendium-ui.js'
 
 // Set up the user interface
 Hooks.on("renderSidebarTab", async (app, html) => {
@@ -40,73 +42,50 @@ class XmlImporter extends Application
     html.find(".import-xml").click(async ev => {
       let inputXML = html.find('[name=all-xml]').val();
       let adder = {
-        class: html.find('[name=classButton]').is(':checked'),
+        features: html.find('[name=featuresButton]').is(':checked'),
+        class: html.find('[name=subclassButton]').is(':checked'),
         spells: html.find('[name=spellsButton]').is(':checked'),
         creature: html.find('[name=creatureButton]').is(':checked'),
         journal: html.find('[name=journalButton]').is(':checked'),
+        feats: html.find('[name=featsButton]').is(':checked'),
       }
       let compendiumName = html.find('[name=compendium-input]').val();
       XmlImporter.parseXml(inputXML, adder, compendiumName)
     });
+
+    html.find(".order-comp-button").click(async ev => {
+      new CompendiumUI().render(true);
+    });
+
     this.close();
   }
 
-  static ensureArray(val){
-    if (Array.isArray(val)){
-      return val;
-    }
-    else{
-      return [val];
-    }
-  }
-
   static async parseXml(xmlInput, adder, compendiumName) {
-    var parser = new DOMParser();
 
-    var xmlDoc = parser.parseFromString(xmlInput,"text/xml");
 
-    var wholeJson = Parser.xmlToJson(xmlDoc)["compendium"];
+    let wholeJson;
+    try{
+      wholeJson =  await XmlImporter.getStringOrUrlJson(xmlInput);
+    }
+    catch(err){
+      const errMsg = `Failed to begin import, Is the text/Url correct?`
+      console.error(errMsg)
+      console.error(err);
+      ui.notifications['error'](errMsg);
+
+      return;
+    }
+
+    await Utilts.PreloadCompendiumIndex();
 
     const debug = true;
 
-    if (adder.class && wholeJson["class"]){
-      let class_feature_pack = await XmlImporter.getCompendiumWithType(compendiumName+"-class-features", "Item");
-      for (var cls of wholeJson["class"]){
-        // console.log(cls)
-        for (let features of ensureArray(cls["autolevel"])){
-          // console.log(features)
-          if (features.feature){
-            for (let feature of ensureArray(features.feature)){
-              var temp = ClassCreator.createClassFeature(feature, cls, features["@attributes"].level, class_feature_pack)
-              if (debug){
-                await temp;
-              }
-              else{
-                temp.catch(e => {
-                  console.error("Error in ClassCreator");
-                  console.error(e);
-                })
-              }
-            }
-          }
-        }
-      }
+    if (adder.feats){
+      ItemCreator.MakeFeats(Utilts.ensureArray(wholeJson['feat']), name => XmlImporter.getCompendiumWithType(compendiumName+name, "Item"));
     }
 
-    if (adder.class && wholeJson["class"]){
-      let class_pack = await XmlImporter.getCompendiumWithType(compendiumName+"-classes", "Item");
-      for (var cls of wholeJson["class"]){
-        const temp = ClassCreator.createClass(cls, class_pack)
-        if (debug){
-          await temp;
-        }
-        else{
-          temp.catch(e => {
-            console.error("Error in ClassCreator");
-            console.error(e);
-          })
-        }
-      }
+    if (adder.features || adder.class){
+      ClassCreator.HandleClassCreation(wholeJson, name => XmlImporter.getCompendiumWithType(compendiumName+name, "Item"), adder.features, adder.class)
     }
 
     if (adder.spells && wholeJson["spell"]){
@@ -114,7 +93,7 @@ class XmlImporter extends Application
       let item_pack = await XmlImporter.getCompendiumWithType(compendiumName+"-spells", "Item");
 
       let start = true;
-      for (var spell of wholeJson["spell"]){
+      for (var spell of Utilts.ensureArray(wholeJson["spell"])){
         //the alphabetically first spell starts with 'Abi'
         // if (!start && spell.name.startsWith("Abi")){
         //   console.log("first spell is "+spell.name);
@@ -123,8 +102,14 @@ class XmlImporter extends Application
 
         if (start){
           const temp = ItemCreator.createSpell(spell, item_pack);
+
           if (debug){
-            await temp;
+            try{
+              await temp;
+            }
+            catch(err){
+              console.error(err);
+            }
           }
           else{
             temp.catch(e => {
@@ -137,17 +122,21 @@ class XmlImporter extends Application
       }
     }
 
+    //reload if we added any spells
+    await Utilts.PreloadCompendiumIndex(adder.spells, false);
+
     if (adder.creature && wholeJson["monster"]){
       // Look for compendium
       let monster_pack = await XmlImporter.getCompendiumWithType(compendiumName+"-monsters", "Actor");
 
-      for (var monster of wholeJson["monster"]){
+      for (var monster of Utilts.ensureArray(wholeJson["monster"])){
         try {
           await ActorCreator.createActor(monster, monster_pack);
         }
         catch (err){
           Utilts.notificationCreator('error', `Could not import ${monster.name}`);
           console.error(err);
+          return
         }
       }
     }
@@ -161,6 +150,8 @@ class XmlImporter extends Application
         JournalCreator.createJournal(currentNode, jpack)
       }
     }
+
+    ui.notifications['info']("Comleted Import");
   }
 
   static async getCompendiumWithType(compendiumName, type){
@@ -173,7 +164,7 @@ class XmlImporter extends Application
             name: compendiumName,
             label: compendiumName,
             collection: compendiumName,
-            entity: type
+            type
           });
     }
     // Update pack object
@@ -183,6 +174,74 @@ class XmlImporter extends Application
     }
 
     return pack;
+  }
+
+  static async getStringOrUrlJson(input){
+
+
+    if(!XmlImporter.isValidHttpUrl(input)){
+      let parser = new DOMParser();
+      let xmlDoc = parser.parseFromString(input,"text/xml");
+      return Parser.xmlToJson(xmlDoc)['compendium']
+    }
+
+    let level1 = await XmlImporter.fetchXMLfromUrl(input);
+
+    var l1Json = Parser.xmlToJson(level1);
+
+    if (l1Json['compendium']){
+      return l1Json['compendium'];
+    }
+
+    if (!l1Json['collection']){
+      throw "No Compedium or collection";
+    }
+
+    //build a nw string
+    //brittle as heck
+    let output = await Promise.all(l1Json.collection.doc.map(async function(singleDoc){
+      return await fetch(
+          new URL(singleDoc['@attributes'].href, input)
+        ).then(x => x.text())
+        .then(XmlImporter.removeSomeLines);
+    }));
+
+    output.join('\n')
+
+    const START = "<?xml version='1.0' encoding='utf-8'?>\n<compendium version=\"0\" auto_indent=\"NO\">"
+    const END = "</compendium>"
+
+    var parser = new DOMParser();
+    const fullString = `${START}${output}${END}`;
+
+    // console.log(fullString)
+
+    let xmlDoc = parser.parseFromString(`${START}${output}${END}`,"text/xml");
+    return Parser.xmlToJson(xmlDoc)['compendium']
+  }
+
+  static removeSomeLines(str){
+    return str.split('\n').slice(2,-2).join('\n')
+  }
+
+  static async fetchXMLfromUrl(url){
+    var parser = new DOMParser();
+
+    let res = await fetch(url);
+    return parser.parseFromString(await res.text(),"text/xml");
+  }
+
+  //https://stackoverflow.com/questions/5717093/check-if-a-javascript-string-is-a-url
+  static isValidHttpUrl(string) {
+    let url;
+    
+    try {
+      url = new URL(string);
+    } catch (_) {
+      return false;  
+    }
+
+    return url.protocol === "http:" || url.protocol === "https:";
   }
 
 }
