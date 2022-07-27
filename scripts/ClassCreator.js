@@ -16,7 +16,6 @@ class ClassCreator {
 
         let subclassedList = ClassCreator.getSubClassList(mergedClassJson);
 
-
         let subclassPack;
         if (createFeatures){
             subclassPack = await compendiumCreator("-class-features");
@@ -26,13 +25,7 @@ class ClassCreator {
             for (let singleClass of subclassedList){
                 await singleClass.autolevel
                     //Ignore the subclasses
-                    .filter(function(feat){
-                        const subName = ClassCreator.getSubClassMap()[singleClass.name];
-                        if (subName){
-                            return !ClassCreator.ForceSingleName(feat.name).startsWith(`${subName}: `);
-                        }
-                        return true
-                    })
+                    .filter(x => !ClassCreator.isSubclass(x, singleClass.name))
                     //add the class features
                     .forEach(async function (feat){
                         await ClassCreator.createClassFeature2(singleClass.name, feat, subclassPack);
@@ -40,7 +33,7 @@ class ClassCreator {
 
                 //Load all the subclass features
                 for (let singleSubclass in singleClass.subclass){
-                    Utilts.ensureArray(singleClass.subclass[singleSubclass].features)
+                    await Utilts.ensureArray(singleClass.subclass[singleSubclass].features)
                         .forEach(async function (feat){
                             await ClassCreator.createClassFeature2(singleSubclass, feat, subclassPack);
                         });
@@ -50,7 +43,6 @@ class ClassCreator {
         }
 
         if (createSubclasses){
-
             //reload items because we added any
             await Utilts.PreloadCompendiumIndex(createFeatures, false);
 
@@ -70,6 +62,49 @@ class ClassCreator {
         }
     }
 
+    static isSubclass(feat, className){
+        const subName = ClassCreator.getSubClassMap()[className];
+        if (subName){
+            return ClassCreator.ForceSingleName(feat.name).startsWith(`${subName}: `);
+        }
+        return false;
+    }
+
+    static getAdvancements(features, defaultLevel = 1){
+        let itermediate = features.reduce(function(acc, current){
+            let name = ClassCreator.ForceSingleName(current.name);
+
+            let uuid = Utilts.getFeatUuid(name);
+
+            if (!uuid){
+                return acc;
+            }
+
+            if (acc[current.level]){
+                acc[current.level].push(uuid)
+            }
+            else{
+                acc[current.level] = [uuid]
+            }
+
+            return acc
+        }, {});
+
+        return Object.keys(itermediate).map(function(level){
+            return {
+                _id: randomID(16),
+                type: "ItemGrant",
+                configuration: {
+                    items: itermediate[level],
+                    optional: true,
+                },
+                value: {},
+                level: (level != 0 ? level : defaultLevel),
+                title: "Features",
+            };
+        });
+    }
+
     static async createSubClasses(subclassedList, compendiumCreator){
 
         let subclassPack = await compendiumCreator("-subclasses");
@@ -84,31 +119,7 @@ class ClassCreator {
 
             for (let singleSubclass in singleClass.subclass){
 
-                let itermediate = singleClass.subclass[singleSubclass].features.reduce(function(acc, current){
-
-                    if (acc[current.level]){
-                        acc[current.level].push(Utilts.getFeatUuid(current.name))
-                    }
-                    else{
-                        acc[current.level] = [Utilts.getFeatUuid(current.name)]
-                    }
-
-                    return acc
-                }, {});
-
-                let advancement = Object.keys(itermediate).map(function(level){
-                    return {
-                        _id: randomID(16),
-                        type: "ItemGrant",
-                        configuration: {
-                            items: itermediate[level],
-                            optional: true,
-                        },
-                        value: {},
-                        level: (level != 0 ? level : singleClass.subclass[singleSubclass].data.level),
-                        title: "Features",
-                    };
-                });
+                let advancement = ClassCreator.getAdvancements(singleClass.subclass[singleSubclass].features, singleClass.subclass[singleSubclass].data.level)
 
                 let subclassData = {
                     name: singleSubclass,
@@ -116,13 +127,12 @@ class ClassCreator {
                     img: Utilts.getImage(singleSubclass),
                     data: {
                         'description.value': Parser.htmlDescription(singleClass.subclass[singleSubclass].data.description),
-                        identifier: singleSubclass.toLowerCase().replaceAll(' ', '-'),
-                        classIdentifier: singleClass.name.toLowerCase(),
+                        identifier: ClassCreator.sanitizeName(singleSubclass),
+                        classIdentifier: ClassCreator.sanitizeName(singleClass.name),
                         advancement,
                     }
                 };
 
-                console.log(subclassData)
                 let item = await Item.create(subclassData, {temporary:true, displaySheet:false});
 
                 await subclassPack.importDocument(item);
@@ -131,22 +141,28 @@ class ClassCreator {
         }
     }
 
+    static sanitizeName(name){
+        return name.toLowerCase().replaceAll(' ', '-')
+    }
+
     static async createClassFeature2(className, interData, pack){
+        let name = ClassCreator.ForceSingleName(interData.name);
+
         let thisClassFeature = {
-            name: interData.name,
+            name,
             type: "feat",
             data: {
                 'description.value': (interData.description ? Parser.htmlDescription(interData.description) : ""),
                 requirements: `${className} ${interData.level}`,
             },
-            img: Utilts.getImage("Item", ItemCreator._trimName(ClassCreator.ForceSingleName(interData.name)).toLowerCase()),
+            img: Utilts.getImage("Item", ItemCreator._trimName(name).toLowerCase()),
         };
 
         let item = await Item.create(thisClassFeature, { temporary: true, displaySheet: false});
 
         let ret = await pack.importDocument(item);
 
-        console.log(`Done importing ${thisClassFeature.name} into ${pack.collection}`);
+        console.log(`Done importing ${name} into ${pack.collection}`);
 
         return ret;
     }
@@ -246,15 +262,27 @@ class ClassCreator {
     static async createClass(cls, pack) {
         // console.log(cls);
 
+        let features;
+        if (ClassCreator.getSubClassMap()[cls.name]){
+            features = cls.autolevel.filter(x => !ClassCreator.isSubclass(x, cls.name));
+        }
+        else{
+            features = cls.autolevel;
+        }
+
+        let advancement = ClassCreator.getAdvancements(features);
+
         let thisClass;
         try{
             thisClass = {
                 name: cls.name,
                 type: "class",
+                identifier: ClassCreator.sanitizeName(cls.name),
                 data: {
                     hitDice: ClassCreator._getHD(cls),
                     spellcasting: ClassCreator._getSpellcasting(cls),
                     skills: ClassCreator._getSkills(cls),
+                    advancement,
                 },
                 sort: 100003
             };
@@ -263,7 +291,6 @@ class ClassCreator {
             console.error(err);
             return;
         }
-            // console.log(thisClass);
 
         thisClass.img = Utilts.getImage("Item", ItemCreator._trimName(thisClass.name))
 
@@ -358,7 +385,7 @@ class ClassCreator {
         else{
             return filtered.map(feat => {
                 return {
-                    name: ClassCreator.ForceSingleName(name).substring(str.length),
+                    name: ClassCreator.ForceSingleName(feat.feature.name).substring(str.length),
                     level: Number(feat['@attributes'].level),
                     description: feat.feature.text
                 }
@@ -397,6 +424,7 @@ class ClassCreator {
                 //TODO I feel gross
                 continue;
             }
+
 
             //list subclasses of class
             const subclassNames = ClassCreator.startWithStringFilter(ClassCreator.getSubClassMap()[oneClass.name], oneClass.autolevel, true)
