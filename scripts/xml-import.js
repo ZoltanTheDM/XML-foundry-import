@@ -4,6 +4,8 @@ import ClassCreator from "./ClassCreator.js";
 import JournalCreator from "./JournalCreator.js";
 import Parser from './Parser.js'
 import Utilts from "./Utilts.js";
+import CompendiumManagement from "./CompendiumManagement.js";
+import CompendiumUI from './compendium-ui.js'
 
 // Set up the user interface
 Hooks.on("renderSidebarTab", async (app, html) => {
@@ -49,10 +51,20 @@ class XmlImporter extends Application
       let compendiumName = html.find('[name=compendium-input]').val();
       XmlImporter.parseXml(inputXML, adder, compendiumName)
     });
+
+    html.find(".order-comp-button").click(async ev => {
+      new CompendiumUI().render(true);
+    });
+
     this.close();
   }
 
   static async parseXml(xmlInput, adder, compendiumName) {
+
+    console.log(CompendiumManagement.getCompendiums());
+
+    // return;
+
     let wholeJson;
     try{
       wholeJson =  await XmlImporter.getStringOrUrlJson(xmlInput);

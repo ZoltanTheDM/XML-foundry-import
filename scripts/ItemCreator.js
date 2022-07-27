@@ -8,101 +8,7 @@ class ItemCreator {
             ItemCreator._instance = new ItemCreator();
         return ItemCreator._instance;
     }
-    /**
-     * Returns an array of all the compendiums that have the identifier `spell` in their name
-     *
-     * @private
-     */
-    async _getCompendiums() {
-        const packKeys = game.packs.keys();
-        const spellCompendiums = [];
-        for (const key of packKeys) {
-            if (key.includes('spell')) {
-                const pack = game.packs.get(key);
-                await pack.getIndex();
-                spellCompendiums.push(pack);
-            }
-        }
-        return spellCompendiums;
-    }
-    async _getCompendiumsType(type, mustBeSpell = false) {
-        const packKeys = game.packs.keys();
-        const compendiums = [];
-        for (const key of packKeys) {
-            const pack = game.packs.get(key);
-            if (pack.documentName == type) {
-                await pack.getIndex();
 
-                //there is some crossover between items
-                //and spells which cause an issue.
-                //Ie shield item and spell
-                if (mustBeSpell){
-                    //check if compendium contains spells
-                    if (pack?.index?.size && pack.index.size >= 1){
-                        var item = pack.index.entries().next().value[1];
-                        if (item.type == "spell"){
-                            compendiums.push(pack);
-                        }
-                    }
-                }
-                else{
-                    compendiums.push(pack);
-                }
-            }
-        }
-        return compendiums;
-    }
-    /**
-     * Returns an entity from the compendium
-     *
-     * @param compendiums - source compendiums
-     * @param spellName - name of the spell
-     * @private
-     */
-    async _getEntityFromCompendium(compendiums, spellName, monsterName) {
-        if (!spellName){
-            return;
-        }
-
-        for (const compendium of compendiums) {
-            let entry = compendium.index.find(e => e.name.toLowerCase() === spellName);
-            if (entry) {
-                return await compendium.getDocument(entry._id);
-            }
-        }
-        console.warn(`${spellName} not found in ${monsterName}`);
-        Utilts.notificationCreator('warn', `${spellName} not found`);
-        return;
-    }
-
-    async getItemDataFromCompendium(spellName, type) {
-        let compendiums = await this._getCompendiumsType(type);
-        for (const compendium of compendiums) {
-            let entry = compendium.index.find(e => e.name.toLowerCase() === spellName);
-            if (entry) {
-                return (await compendium.getDocument(entry._id)).data;
-            }
-        }
-
-        // console.warn("no image found for "+spellName)
-        return;
-    }
-
-    async _getEntityImageFromCompendium(spellName, type) {
-        console.warn("Deprecated _getEntityImageFromCompendium");
-
-        let compendiums = await this._getCompendiumsType(type);
-        for (const compendium of compendiums) {
-            let entry = compendium.index.find(e => e.name.toLowerCase() === spellName);
-            if (entry) {
-                if (entry.img != "icons/svg/mystery-man.svg"){
-                    return entry.img;
-                }
-            }
-        }
-        // console.warn("no relavant image found for "+spellName)
-        return;
-    }
     /**
      * Converts the array of names to the array of spell entities for the createEmbeddedEntity
      *
@@ -110,10 +16,10 @@ class ItemCreator {
      * @param compendium - a compendium to get the entity structure from
      * @private
      */
-    async _prepareSpellsArray(spells, compendium, name) {
+    async _prepareSpellsArray(spells, name) {
         for (let spell of spells) {
             let index = spells.indexOf(spell);
-            spells[index] = await this._getEntityFromCompendium(compendium, spell.toLowerCase().trim(), name);
+            spells[index] = await Utilts.getSpellData(spell.trim());
         }
         return spells.filter(el => el != null);
     }
@@ -124,12 +30,11 @@ class ItemCreator {
      * @private
      */
     async _prepareSpellsObject(spells, name) {
-        const compendiums = await this._getCompendiumsType("Item", true);
         let spellsArray = [];
         for (const key in spells) {
             if (!spells.hasOwnProperty(key))
                 continue;
-            const newSpells = await this._prepareSpellsArray(spells[key], compendiums, name);
+            const newSpells = await this._prepareSpellsArray(spells[key], name);
             spellsArray = [
                 ...spellsArray,
                 ...newSpells
@@ -164,8 +69,6 @@ class ItemCreator {
 
         var spells = {}
 
-        const compendiums = await this._getCompendiumsType("Item", true);
-
         for (var use_level in spellsDetails){
             var uses = {
                 value: 0,
@@ -181,7 +84,6 @@ class ItemCreator {
             }
 
             async function getSpellData(spell){
-                // let spellItem = await this._getEntityFromCompendium(compendiums, Parser.trimSpellName(spell), actor.name);
                 let spellItem = await Utilts.getSpellData(Parser.trimSpellName(spell), actor.name)
 
                 if (spellItem){

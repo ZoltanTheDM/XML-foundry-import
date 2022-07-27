@@ -1,3 +1,4 @@
+import CompendiumManagement from "./CompendiumManagement.js";
 const MISSING = "icons/svg/mystery-man.svg"
 
 class Utilts {
@@ -24,12 +25,12 @@ class Utilts {
         }
 
         if (loadItems){
-            Utilts.itemsImages = {};
+            Utilts.items = {};
             Utilts.spellList = {};
             Utilts.feats = {};
         }
 
-        for(let comp of game.packs.contents){
+        for(let comp of CompendiumManagement.getCompendiums()){
             const isActors = comp.documentName == "Actor";
             const isItems = comp.documentName == "Item";
 
@@ -41,10 +42,10 @@ class Utilts {
                     if (currentValue.img != MISSING){
                         //get name to images
                         if (isActors && loadActors){
-                            Utilts.actorImages[currentValue.name] = currentValue.img;
+                            Utilts.actorImages[currentValue.name.toLowerCase()] ??= currentValue.img;
                         }
                         else if(loadItems){
-                            Utilts.itemsImages[currentValue.name] = currentValue.img;
+                            Utilts.items[currentValue.name.toLowerCase()] ??= {img: currentValue.img, uuid: `Compendium.${comp.collection}.${currentValue._id}`};
                         }
                     }
 
@@ -52,11 +53,11 @@ class Utilts {
                     if (loadItems && currentValue.type == "spell"){
                         //TODO order the compendiums
                         //name to uuid
-                        Utilts.spellList[currentValue.name.toLowerCase()] = `Compendium.${comp.collection}.${currentValue._id}`
+                        Utilts.spellList[currentValue.name.toLowerCase()] ??= `Compendium.${comp.collection}.${currentValue._id}`
                     }
 
                     if (loadItems && currentValue.type == "feat"){
-                        Utilts.feats[currentValue.name.toLowerCase()] = `Compendium.${comp.collection}.${currentValue._id}`
+                        Utilts.feats[currentValue.name.toLowerCase()] ??= `Compendium.${comp.collection}.${currentValue._id}`
                     }
                 })
 
@@ -68,14 +69,24 @@ class Utilts {
 
     getImage(type, name){
         if (type == "Item"){
-            return Utilts.itemsImages[name] ?? MISSING;
+            return Utilts.items[name.toLowerCase()]?.img ?? MISSING;
         }
 
         if (type == "Actor"){
-            return Utilts.actorImages[name] ?? MISSING;
+            return Utilts.actorImages[name.toLowerCase()] ?? MISSING;
         }
 
         return MISSING;
+    }
+
+    async getItemData(name){
+        if (Utilts.items.hasOwnProperty(name.toLowerCase())){
+            return fromUuid(Utilts.items[name.toLowerCase()].uuid)
+        }
+        else{
+            console.warn(`${name} not found`);
+            ui.notifications['warn'](`${name} not found`);
+        }
     }
 
     async getSpellData(name, monsterName="???"){

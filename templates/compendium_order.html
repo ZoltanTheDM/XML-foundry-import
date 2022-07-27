@@ -1,0 +1,67 @@
+
+<style type="text/css">
+    .compendium-sort-qualifier.item{
+      border: 1px solid #c9c7b8;
+      height: 30px;
+      align-items: center;
+    }
+
+    .compendium-sort-qualifier.item-list {
+      padding: 0;
+      padding-left: 0;
+      margin: 0;
+      border: 0;
+      list-style: none;
+    }
+
+    .compendium-sort-qualifier.item-controls {
+      flex: 0 0 44px;
+    }
+
+</style>
+<div>
+	<div class = "form-group-import">
+		<p>
+			This XML Importer pulls data from other compendiums in order to get spells, images, and other data. In this window you can reorder or disable which compendiums it pulls data from.
+		</p>
+
+		<hr>
+		<h2 class="compendium-sort-qualifier" >Ordered Compendiums</h2>
+		<ol class="compendium-sort-qualifier autolevel-list item-list">
+			{{#each compendiums as |comp|}}
+				<li class="compendium-sort-qualifier flexrow item" id="{{comp.collection}}">
+                    <div>
+                    	<a class="compendium-target">
+						{{comp.name}}
+						</a>
+					</div>
+					<div>	
+						{{comp.type}}
+					</div>
+					<div class="compendium-sort-qualifier item-controls flexrow">
+						<a class="up-compendium-value"><i class="fas fa-plus"></i></a>
+						<a class="down-compendium-value"><i class="fas fa-minus"></i></a>
+						<a class="disable-compendium-value"><i class="fas fa-times"></i></a>
+					</div>
+				</li>
+			{{/each}}
+		</ol>
+		<hr>
+		<h2 class="compendium-sort-qualifier" >Disabled</h2>
+		<ol class="compendium-sort-qualifier autolevel-list item-list">
+			{{#each disabled as |comp|}}
+				<li class="compendium-sort-qualifier flexrow item" id="{{comp.collection}}">
+					<div>
+						{{comp.name}}
+					</div>
+					<div>
+						{{comp.type}}
+					</div>
+					<div class="compendium-sort-qualifier item-controls flexrow">
+						<a class="enable-compendium-value"><i class="fas fa-check"></i></a>
+					</div>
+				</li>
+			{{/each}}
+		</ol>
+	</div>
+</div>

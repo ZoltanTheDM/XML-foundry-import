@@ -542,7 +542,7 @@ class ActorCreator {
 
             ActorCreator.ArmorData = {};
             for (const item of PossibleArmor){
-                let data = await ItemCreator.getItemDataFromCompendium(item, "Item")
+                let data = (await Utilts.getItemData(item)).data
 
                 if (!data){
                     console.warn(`Did not find data for ${item}`);
@@ -553,7 +553,6 @@ class ActorCreator {
                     ActorCreator.ArmorData[item] = data;
                 }
             }
-            // console.log(ActorCreator.ArmorData)
         }
     }
 }
