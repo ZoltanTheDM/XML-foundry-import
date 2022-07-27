@@ -751,5 +751,27 @@ class ItemCreator {
         // await pack.getIndex(); // Need to refresh the index to update it
         console.log(`Done importing ${thisSpell.name} into ${pack.collection}`);
     }
+
+    async MakeFeats(featJson, compendiumCreator){
+
+        let featPack = await compendiumCreator("-feats");
+
+        for (let feat of featJson){
+            let featData = {
+                name: feat.name,
+                type: "feat",
+                data: {
+                    'description.value': feat.text,
+                    requirements: feat.prerequisite ?? "",
+                }
+            };
+
+            let item = await Item.create(featData, {temporary: true, displaySheet:false});
+
+            await featPack.importDocument(item);
+            console.log(`Done importing ${feat.name.name} into ${featPack.collection}`);
+        }
+
+    }
 }
 export default ItemCreator.getInstance();

@@ -47,6 +47,7 @@ class XmlImporter extends Application
         spells: html.find('[name=spellsButton]').is(':checked'),
         creature: html.find('[name=creatureButton]').is(':checked'),
         journal: html.find('[name=journalButton]').is(':checked'),
+        feats: html.find('[name=featsButton]').is(':checked'),
       }
       let compendiumName = html.find('[name=compendium-input]').val();
       XmlImporter.parseXml(inputXML, adder, compendiumName)
@@ -61,9 +62,6 @@ class XmlImporter extends Application
 
   static async parseXml(xmlInput, adder, compendiumName) {
 
-    console.log(CompendiumManagement.getCompendiums());
-
-    // return;
 
     let wholeJson;
     try{
@@ -78,9 +76,16 @@ class XmlImporter extends Application
       return;
     }
 
+    console.log(wholeJson)
+    return;
+
     await Utilts.PreloadCompendiumIndex();
 
     const debug = true;
+
+    if (adder.feats){
+      ItemCreator.MakeFeats(Utilts.ensureArray(wholeJson['feat']), name => XmlImporter.getCompendiumWithType(compendiumName+name, "Item"));
+    }
 
     if (adder.features || adder.class){
       ClassCreator.HandleClassCreation(wholeJson, name => XmlImporter.getCompendiumWithType(compendiumName+name, "Item"), adder.features, adder.class)

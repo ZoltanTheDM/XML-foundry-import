@@ -9,8 +9,6 @@ class CompendiumManagement {
         CompendiumManagement.OrderedCompList = game.packs.contents.map(x => x.collection);
 
         CompendiumManagement.Disabled = new Set();
-
-        console.log(CompendiumManagement.OrderedCompList)
     }
 
     static getCompendiums(){
