@@ -10,7 +10,8 @@ The code is pretty rough but it is functional for importing spells and creatures
 2. Change the prefix if you want. Default is `xml`. This will change the compendium it is output to.
 3. Paste a url to an xml or the contents of an `xml` into the large text box.
 4. Use checkboxes for importing classes, spells and/or, monsters
-5. Click import
+5. You may want to change your compendium order with the `Order Compendiums` button
+5. Click `Import`
 6. Wait and watch its progress in the console. This can take quite a while depending on the size of the XML.
 
 The only way I know of to stop the importing process once it has started is refreashing.
@@ -25,7 +26,6 @@ It took on the order of **15 minutes** to complete several hundred monsters.
 
 * Import classes
 * Import items
-* Ordered Compendium Search. For finding spells to add to monsters it would be nice to give a search order. My thought is DAE -> Official SRD -> XML based compendium
 * For some reason I have been unable to create temporary actors and add them to a compendium. For now they are created and deleted when they are added to the compendium. This deleting breaks if there is an error thrown. Which has led to a bunch of actors created and never deleted...
 * A progress bar/inidicator
 * A stop in progress import button
