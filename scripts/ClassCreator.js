@@ -4,7 +4,7 @@ import Utilts from "./Utilts.js";
 
 class ClassCreator {
 
-    static async HandleClassCreation(whole, compendiumCreator, createFeatures, createClasses){
+    static async HandleClassCreation(whole, compendiumCreator, createFeatures, createSubclasses, createClass){
 
         if (!whole || !whole.class){
             return
@@ -17,31 +17,57 @@ class ClassCreator {
         let subclassedList = ClassCreator.getSubClassList(mergedClassJson);
 
 
-
+        let subclassPack;
         if (createFeatures){
-            let featuresPack = await compendiumCreator("-class-features");
+            subclassPack = await compendiumCreator("-class-features");
 
             //create class features
             //only do subclass because we can assume classes are good?
             for (let singleClass of subclassedList){
-                for (let singleSubclass in singleClass.subclass){
-                    singleClass.subclass[singleSubclass].features.forEach(async function (feat){
-                        await ClassCreator.createClassFeature2(singleSubclass, feat, featuresPack);
+                await singleClass.autolevel
+                    //Ignore the subclasses
+                    .filter(function(feat){
+                        const subName = ClassCreator.getSubClassMap()[singleClass.name];
+                        if (subName){
+                            return !ClassCreator.ForceSingleName(feat.name).startsWith(`${subName}: `);
+                        }
+                        return true
+                    })
+                    //add the class features
+                    .forEach(async function (feat){
+                        await ClassCreator.createClassFeature2(singleClass.name, feat, subclassPack);
                     });
+
+                //Load all the subclass features
+                for (let singleSubclass in singleClass.subclass){
+                    Utilts.ensureArray(singleClass.subclass[singleSubclass].features)
+                        .forEach(async function (feat){
+                            await ClassCreator.createClassFeature2(singleSubclass, feat, subclassPack);
+                        });
                 }
             }
 
         }
 
-        if (!createClasses){
-            return;
+        if (createSubclasses){
+
+            //reload items because we added any
+            await Utilts.PreloadCompendiumIndex(createFeatures, false);
+
+            await ClassCreator.createSubClasses(subclassedList, compendiumCreator);
         }
 
-        //reload items because we added any
-        await Utilts.PreloadCompendiumIndex(createFeatures, false);
+        if (createClass){
+            await Utilts.PreloadCompendiumIndex(createFeatures || createSubclasses, false);
+            let featuresPack = await compendiumCreator("-classes");
 
+            // let singleClass = subclassedList[0];
+            //create the class
+            for (let singleClass of subclassedList){
+                await ClassCreator.createClass(singleClass, featuresPack);
+            }
 
-        await ClassCreator.createSubClasses(subclassedList, compendiumCreator);
+        }
     }
 
     static async createSubClasses(subclassedList, compendiumCreator){
@@ -96,6 +122,7 @@ class ClassCreator {
                     }
                 };
 
+                console.log(subclassData)
                 let item = await Item.create(subclassData, {temporary:true, displaySheet:false});
 
                 await subclassPack.importDocument(item);
@@ -112,7 +139,7 @@ class ClassCreator {
                 'description.value': (interData.description ? Parser.htmlDescription(interData.description) : ""),
                 requirements: `${className} ${interData.level}`,
             },
-            img: Utilts.getImage("Item", ItemCreator._trimName(interData.name).toLowerCase()),
+            img: Utilts.getImage("Item", ItemCreator._trimName(ClassCreator.ForceSingleName(interData.name)).toLowerCase()),
         };
 
         let item = await Item.create(thisClassFeature, { temporary: true, displaySheet: false});
@@ -322,10 +349,7 @@ class ClassCreator {
     static startWithStringFilter(str, classAutoLevel, data=false){
         str = `${str}: `
         let filtered = classAutoLevel.filter(feat => {
-            if (Array.isArray(feat.feature?.name)){
-                return feat.feature.name[0].startsWith(str);
-            }
-            return feat.feature?.name?.startsWith(str);
+            return ClassCreator.ForceSingleName(feat.feature?.name)?.startsWith(str);
         });
 
         if(!data){
@@ -333,21 +357,17 @@ class ClassCreator {
         }
         else{
             return filtered.map(feat => {
-                let name = feat.feature.name;
-                if (Array.isArray(feat.feature?.name)){
-                    //TODO do something with the extra names
-                    name = feat.feature.name[0];
+                return {
+                    name: ClassCreator.ForceSingleName(name).substring(str.length),
+                    level: Number(feat['@attributes'].level),
+                    description: feat.feature.text
                 }
-
-                return {name: name.substring(str.length), level: Number(feat['@attributes'].level), description: feat.feature.text}
             });
         }
     }
 
-    //modifies original array but *shrug*
-    static getSubClassList(mergedJson){
-
-        const SubclassFeature = {
+    static getSubClassMap(){
+        return {
             'Barbarian': "Primal Path",
             'Bard': 'Bard College',
             'Cleric': 'Divine Domain',
@@ -362,19 +382,24 @@ class ClassCreator {
             'Wizard': 'Arcane Tradition',
         }
 
+    }
+
+    //modifies original array but *shrug*
+    static getSubClassList(mergedJson){
+
         //populate 
         for(let oneClass of mergedJson){
 
-            if (!SubclassFeature[oneClass.name]){
-                console.error(`No subclass for ${oneClass.name}`)
-                oneClass.subclass = [];
+            if (!ClassCreator.getSubClassMap()[oneClass.name]){
+                console.warn(`No subclass for ${oneClass.name}`)
+                oneClass.subclass = {};
 
                 //TODO I feel gross
                 continue;
             }
 
             //list subclasses of class
-            const subclassNames = ClassCreator.startWithStringFilter(SubclassFeature[oneClass.name], oneClass.autolevel, true)
+            const subclassNames = ClassCreator.startWithStringFilter(ClassCreator.getSubClassMap()[oneClass.name], oneClass.autolevel, true)
 
             //get array of subclass Features under the subclass
             let subClassFeatures = subclassNames.reduce((acc, subclass) => {
@@ -410,6 +435,13 @@ class ClassCreator {
 
         return mergedJson;
 
+    }
+
+    static ForceSingleName(name){
+        if(Array.isArray(name)){
+            return name[0];
+        }
+        return name
     }
 }
 

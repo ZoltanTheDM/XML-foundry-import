@@ -43,7 +43,8 @@ class XmlImporter extends Application
       let inputXML = html.find('[name=all-xml]').val();
       let adder = {
         features: html.find('[name=featuresButton]').is(':checked'),
-        class: html.find('[name=subclassButton]').is(':checked'),
+        classes: html.find('[name=classButton]').is(':checked'),
+        subclass: html.find('[name=subclassButton]').is(':checked'),
         spells: html.find('[name=spellsButton]').is(':checked'),
         creature: html.find('[name=creatureButton]').is(':checked'),
         journal: html.find('[name=journalButton]').is(':checked'),
@@ -81,11 +82,7 @@ class XmlImporter extends Application
     const debug = true;
 
     if (adder.feats){
-      ItemCreator.MakeFeats(Utilts.ensureArray(wholeJson['feat']), name => XmlImporter.getCompendiumWithType(compendiumName+name, "Item"));
-    }
-
-    if (adder.features || adder.class){
-      ClassCreator.HandleClassCreation(wholeJson, name => XmlImporter.getCompendiumWithType(compendiumName+name, "Item"), adder.features, adder.class)
+      await ItemCreator.MakeFeats(Utilts.ensureArray(wholeJson['feat']), name => XmlImporter.getCompendiumWithType(compendiumName+name, "Item"));
     }
 
     if (adder.spells && wholeJson["spell"]){
@@ -120,6 +117,10 @@ class XmlImporter extends Application
           }
         }
       }
+    }
+
+    if (adder.features || adder.subclass || adder.classes){
+      await ClassCreator.HandleClassCreation(wholeJson, name => XmlImporter.getCompendiumWithType(compendiumName+name, "Item"), adder.features, adder.subclass, adder.classes)
     }
 
     //reload if we added any spells
