@@ -7,10 +7,11 @@
   "esmodules": ["scripts/xml-import.js"],
   "styles": ["styles/style.css"],
   "compatibility": {
-    "minimum": 9,
-    "verified": 9,
-    "maximum": 9
+      "minimum": "9",
+      "verified": "9"
   },
+  "minimumCoreVersion": "9",
+  "compatibleCoreVersion": "9",
   "system": "dnd5e",
   "url": "https://github.com/ZoltanTheDM/XML-foundry-import",
   "manifest": "https://raw.githubusercontent.com/ZoltanTheDM/XML-foundry-import/main/module.json",
