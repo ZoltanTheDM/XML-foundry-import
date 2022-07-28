@@ -1,3 +1,5 @@
+import Utilts from "./Utilts.js";
+
 class Parser {
     static _skillsToShortMap = {
         'Acrobatics': 'acr',
@@ -194,7 +196,16 @@ class Parser {
 
     static getCreatureTypeAndSource(json) {
         const typeMatch = json['type'].match(/^\s*(?<type>[\w ]+[\w])\s*(\((?<subtype>[^\)]+)\))?\s*(, \s*(?<source>.+))?$/);//\s*(?<subtype>\([^\)]\))?\s*(, )?\s*(?<source>[\w ]+)?$
-        return { type: typeMatch.groups['type'], source: typeMatch.groups['source'], subtype: Parser.toTitleCase(typeMatch.groups['subtype']) };
+
+        if (!typeMatch){
+            return {};
+        }
+
+        return {
+            type:typeMatch.groups['type'],
+            source: typeMatch.groups['source'],
+            subtype: Parser.toTitleCase(typeMatch.groups['subtype'])
+        };
     }
     /**
      * Returns a creature's stats
@@ -464,6 +475,9 @@ class Parser {
     }
 
     static htmlDescription(textArray){
+        if (!textArray || Object.keys(textArray).length === 0){
+            return ""
+        }
 
         if (typeof textArray === 'string' || textArray instanceof String){
             return textArray
@@ -491,9 +505,10 @@ class Parser {
     static getSpellcastingStats(text) {
         const spellcastingLevel = text.match(/(?<level>[\dlO]+)\w{1,2}[ -]level[ -]spell ?caster/);
         const spellcastingModifier = text.match(/(spell ?casting ability is|spellcaster (that|who) uses) (?<mod>\w+)/);
+
         return {
             level: spellcastingLevel ? Number(spellcastingLevel.groups.level.replace('l', '1').replace('O', '0')) : 0,
-            modifier: spellcastingModifier.groups.mod
+            modifier: spellcastingModifier?.groups?.mod
         };
     }
     /**
@@ -528,13 +543,16 @@ class Parser {
         // }
         actions.forEach((ability) => {
             //sometimes there are empty abilities
-            if (Object.keys(ability['name']).length == 0 && Object.keys(ability['text']).length == 0){
+            if (Object.keys(ability['name'] ?? {}).length == 0 && Object.keys(ability['text']).length == 0){
                 return;
             }
 
             let text = Parser.htmlDescription(ability.text)
 
             let cleanName = ability.name;
+            if (!cleanName || Object.keys(cleanName) == 0){
+                cleanName = "Ability";
+            }
 
             var abilityObject = {
                 description: Parser._clearText(text),
@@ -554,7 +572,7 @@ class Parser {
                 abilityObject.data = Parser.getAttack(text);
             }
 
-            let recharge_match = ability.name.match(/ \(Recharges after a (?<short>Short or )?Long Rest\)/);
+            let recharge_match = cleanName.match(/ \(Recharges after a (?<short>Short or )?Long Rest\)/);
 
             if (recharge_match){
                 if (recharge_match.groups.short){
@@ -575,7 +593,7 @@ class Parser {
                 cleanName = cleanName.replace(/ \(Recharges after a (?<short>Short or )?Long Rest\)/, "");
             }
 
-            let day_match = ability.name.match(/ \((?<count>\d)\/day\)/i);
+            let day_match = cleanName.match(/ \((?<count>\d)\/day\)/i);
 
             if (day_match){
                 abilityObject.data.uses = {
@@ -587,7 +605,7 @@ class Parser {
                 cleanName = cleanName.replace(/ \((?<count>\d)\/day\)/i, "");
             }
 
-            let recharge_on = ability.name.match(/ \(Recharge (?<recharge>\d)([-—]6)?\)/);
+            let recharge_on = cleanName.match(/ \(Recharge (?<recharge>\d)([-—]6)?\)/);
 
             if (recharge_on){
                 if (recharge_on.groups.recharge){
@@ -848,7 +866,7 @@ class Parser {
 
             actionObject['lair'] = {};
             //assume each row is a lair action
-            lairSlice[0]['text'].slice(1).forEach(function(action, index){
+            Utilts.ensureArray(lairSlice[0]['text']).slice(1).forEach(function(action, index){
                 if (action.startsWith("• ")){
                     action = action.substring(2);
                 }

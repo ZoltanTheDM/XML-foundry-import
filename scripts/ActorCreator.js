@@ -175,7 +175,7 @@ class ActorCreator {
         return {
             alignment: propsDetails.alignment,
             type: {
-                value: propsDetails.type.trim(),
+                value: propsDetails.type?.trim(),
                 subtype: propsDetails.subtype
             },
             cr: propsDetails.challenge['CR'],
