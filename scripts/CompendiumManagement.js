@@ -6,9 +6,18 @@ class CompendiumManagement {
             return
         }
 
-        CompendiumManagement.OrderedCompList = game.packs.contents.map(x => x.collection);
+        CompendiumManagement.OrderedCompList = game.packs.contents
+                .filter(CompendiumManagement.isUseful)
+                .map(x => x.collection)
 
-        CompendiumManagement.Disabled = new Set();
+        CompendiumManagement.Disabled = new Set(game.packs.contents
+                .filter(x => !CompendiumManagement.isUseful(x))
+                .map(x => x.collection)
+            );
+    }
+
+    static isUseful(comp){
+        return (comp.documentName == "Item" || comp.documentName == "Actor")
     }
 
     static getCompendiums(){

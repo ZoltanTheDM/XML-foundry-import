@@ -264,11 +264,11 @@ class ActorCreator {
 
     static _calcArmor(props, items){
         let dexMod = Math.floor((Number(props.stats.Dex) - 10) / 2);
-        let armor = items?.find(item => item.data.armor.type != 'shield');
+        let armor = items?.find(item => item.data.armor?.type != 'shield');
 
         let armorValue = armor?.data.armor.value ?? 10;
         let maxDex = armor?.data.armor.dex ?? 100;
-        let hasShield = !!items?.find(item => item.data.armor.type == 'shield');;
+        let hasShield = !!items?.find(item => item.data.armor?.type == 'shield');;
 
         return armorValue + Math.min(maxDex, dexMod) + (hasShield ? 2 : 0);
     }
