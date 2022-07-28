@@ -16,27 +16,31 @@ class ClassCreator {
 
         let subclassedList = ClassCreator.getSubClassList(mergedClassJson);
 
-        let subclassPack;
+        let subclassRelatedFeatures = [];
         if (createFeatures){
-            subclassPack = await compendiumCreator("-class-features");
+            let featuresPack = await compendiumCreator("-class-features");
 
             //create class features
             //only do subclass because we can assume classes are good?
             for (let singleClass of subclassedList){
-                await singleClass.autolevel
+                subclassRelatedFeatures = subclassRelatedFeatures.concat(singleClass.autolevel
                     //Ignore the subclasses
                     .filter(x => !ClassCreator.isSubclass(x, singleClass.name))
                     //add the class features
-                    .forEach(async function (feat){
-                        await ClassCreator.createClassFeature2(singleClass.name, feat, subclassPack);
-                    });
+                    .map(async function (feat){
+                        let fullFeature = await ClassCreator.createClassFeature2(singleClass.name, feat, featuresPack);
+
+                        if(fullFeature.name == ClassCreator.getSubClassMap()[singleClass.name]){
+                            return [singleClass.name, fullFeature]
+                        }
+                    }));
 
                 //Load all the subclass features
                 for (let singleSubclass in singleClass.subclass){
-                    await Utilts.ensureArray(singleClass.subclass[singleSubclass].features)
+                    await (Utilts.ensureArray(singleClass.subclass[singleSubclass].features)
                         .forEach(async function (feat){
-                            await ClassCreator.createClassFeature2(singleSubclass, feat, subclassPack);
-                        });
+                            await ClassCreator.createClassFeature2(singleSubclass, feat, featuresPack);
+                        }));
                 }
             }
 
@@ -47,6 +51,32 @@ class ClassCreator {
             await Utilts.PreloadCompendiumIndex(createFeatures, false);
 
             await ClassCreator.createSubClasses(subclassedList, compendiumCreator);
+        }
+
+
+        if (createFeatures){
+            await Utilts.PreloadCompendiumIndex(createSubclasses, false);
+
+            //update subclass feature to include the subclasses
+            (await Promise.all(subclassRelatedFeatures))
+                //remove items that are not subclass features
+                .filter(x => !!x)
+                //add subclasses to description
+                .forEach(async function([clsName, feature]){
+                    // console.log(`adding to ${feature.name} member of ${clsName}`)
+                    // console.log(subclassedList.find(c => c.name == clsName))
+
+                    let text = Object.keys(subclassedList.find(c => c.name == clsName).subclass)
+                        .reduce(function(acc, subclass){
+                            return `${acc}<li>${Utilts.getSubclassTextId(subclass)}</li>`;
+                        }, "");
+
+                    // feature
+                    await feature.update({
+                        'data.description.value': `${feature.data.data.description.value}<ul>${text}</ul>`
+                    })
+                })
+
         }
 
         if (createClass){

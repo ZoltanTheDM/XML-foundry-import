@@ -28,6 +28,7 @@ class Utilts {
             Utilts.items = {};
             Utilts.spellList = {};
             Utilts.feats = {};
+            Utilts.subclass = {};
         }
 
         for(let comp of CompendiumManagement.getCompendiums()){
@@ -58,6 +59,11 @@ class Utilts {
 
                     if (loadItems && currentValue.type == "feat"){
                         Utilts.feats[currentValue.name.toLowerCase()] ??= `Compendium.${comp.collection}.${currentValue._id}`
+                    }
+
+                    //get text of subclasses
+                    if (loadItems && currentValue.type == "subclass"){
+                        Utilts.subclass[currentValue.name.toLowerCase()] ??= `@Compendium[${comp.collection}.${currentValue._id}]{${currentValue.name}}`
                     }
                 })
 
@@ -112,6 +118,16 @@ class Utilts {
     getFeatUuid(name, featTop="???"){
         if (Utilts.feats.hasOwnProperty(name.toLowerCase())){
             return Utilts.feats[name.toLowerCase()]
+        }
+        else{
+            console.warn(`${name} not found in ${featTop}`);
+            ui.notifications['warn'](`${name} not found`);
+        }
+    }
+
+    getSubclassTextId(name, featTop="???"){
+        if (Utilts.subclass.hasOwnProperty(name.toLowerCase())){
+            return Utilts.subclass[name.toLowerCase()]
         }
         else{
             console.warn(`${name} not found in ${featTop}`);
