@@ -136,6 +136,11 @@ class Utilts {
     }
 
     ensureArray(val){
+        //undefined values should be empty arrays
+        if (val == undefined){
+            return [];
+        }
+
         return Array.isArray(val) ? val : [val];
     }
 

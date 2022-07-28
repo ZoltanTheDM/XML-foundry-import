@@ -81,7 +81,7 @@ class XmlImporter extends Application
 
     const debug = true;
 
-    if (adder.feats){
+    if (adder.feats && wholeJson['feat']){
       await ItemCreator.MakeFeats(Utilts.ensureArray(wholeJson['feat']), name => XmlImporter.getCompendiumWithType(compendiumName+name, "Item"));
     }
 
@@ -98,22 +98,13 @@ class XmlImporter extends Application
         // }
 
         if (start){
-          const temp = ItemCreator.createSpell(spell, item_pack);
-
-          if (debug){
-            try{
-              await temp;
-            }
-            catch(err){
-              console.error(err);
-            }
+          try{
+            await ItemCreator.createSpell(spell, item_pack);
           }
-          else{
-            temp.catch(e => {
-              Utilts.notificationCreator('error', `Could not import ${spell.name}`);
-              console.error("Error in ItemCreator");
-              console.error(e);
-            });
+          catch(e){
+            Utilts.notificationCreator('error', `Could not import ${spell.name}`);
+            console.error(`Error importing spell: ${spell.name}`);
+            console.error(e);
           }
         }
       }
@@ -136,8 +127,8 @@ class XmlImporter extends Application
         }
         catch (err){
           Utilts.notificationCreator('error', `Could not import ${monster.name}`);
+          console.error(`Could not import ${monster.name}`);
           console.error(err);
-          return
         }
       }
     }

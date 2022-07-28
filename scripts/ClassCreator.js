@@ -28,10 +28,17 @@ class ClassCreator {
                     .filter(x => !ClassCreator.isSubclass(x, singleClass.name))
                     //add the class features
                     .map(async function (feat){
-                        let fullFeature = await ClassCreator.createClassFeature2(singleClass.name, feat, featuresPack);
+                        try{
+                            let fullFeature = await ClassCreator.createClassFeature2(singleClass.name, feat, featuresPack);
 
-                        if(fullFeature.name == ClassCreator.getSubClassMap()[singleClass.name]){
-                            return [singleClass.name, fullFeature]
+                            if(fullFeature.name == ClassCreator.getSubClassMap()[singleClass.name]){
+                                return [singleClass.name, fullFeature]
+                            }
+                        }
+                        catch(e){
+                            Utilts.notificationCreator('error', `There has been an error while creating class feature ${feat.name}`);
+                            console.error(`There has been an error while creating ${feat.name}`);
+                            console.error(e);
                         }
                     }));
 
@@ -39,7 +46,14 @@ class ClassCreator {
                 for (let singleSubclass in singleClass.subclass){
                     await (Utilts.ensureArray(singleClass.subclass[singleSubclass].features)
                         .forEach(async function (feat){
-                            await ClassCreator.createClassFeature2(singleSubclass, feat, featuresPack);
+                            try{
+                                await ClassCreator.createClassFeature2(singleSubclass, feat, featuresPack);
+                            }
+                            catch(e){
+                                Utilts.notificationCreator('error', `There has been an error while creating class feature ${feat.name}`);
+                                console.error(`There has been an error while creating ${feat.name}`);
+                                console.error(e);
+                            }
                         }));
                 }
             }
@@ -68,7 +82,7 @@ class ClassCreator {
 
                     let text = Object.keys(subclassedList.find(c => c.name == clsName).subclass)
                         .reduce(function(acc, subclass){
-                            return `${acc}<li>${Utilts.getSubclassTextId(subclass)}</li>`;
+                            return `${acc}<li>${Utilts.getSubclassTextId(subclass, "Class Features")}</li>`;
                         }, "");
 
                     //Update subclass feature to include link to all the features
@@ -104,7 +118,7 @@ class ClassCreator {
         let itermediate = features.reduce(function(acc, current){
             let name = ClassCreator.ForceSingleName(current.name);
 
-            let uuid = Utilts.getFeatUuid(name);
+            let uuid = Utilts.getFeatUuid(name, "Class Advancements");
 
             if (!uuid){
                 return acc;
@@ -172,7 +186,7 @@ class ClassCreator {
     }
 
     static sanitizeName(name){
-        return name.toLowerCase().replaceAll(' ', '-')
+        return name.toLowerCase().replaceAll(' ', '-').replaceAll(/[^a-z0-9\-_]/gi, "")
     }
 
     static async createClassFeature2(className, interData, pack){
@@ -398,6 +412,8 @@ class ClassCreator {
                 return
             }
 
+            baseClass.autolevel = Utilts.ensureArray(baseClass.autolevel)
+
             ClassCreator.SetSpellLevels(baseClass)
 
             options.filter(i => i !== baseClass).forEach(otherClass => {
@@ -409,8 +425,6 @@ class ClassCreator {
                     baseClass.autolevel = baseClass.autolevel.concat(otherClass.autolevel);
                 }
             });
-
-            baseClass.autolevel = Utilts.ensureArray(baseClass.autolevel)
 
             return baseClass;
         });

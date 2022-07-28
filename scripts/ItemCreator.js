@@ -67,15 +67,13 @@ class ItemCreator {
         if (!spellsDetails || Object.keys(spellsDetails).length == 0)
             return;
 
-        var spells = {}
-
         for (var use_level in spellsDetails){
             var uses = {
                 value: 0,
                 max: 0,
                 per: ""
             }
-            if (use_level !== "At will"){
+            if (!(/At will/i.test(use_level))){
                 uses = {
                     value: use_level,
                     max: use_level,
@@ -108,10 +106,14 @@ class ItemCreator {
             let spellListLevel = await Promise.all(spellsDetails[use_level].map(getSpellData));
 
             try {
-                await actor.createEmbeddedDocuments("Item", spellListLevel);
+                //remeber to filter out the spells that were not found
+                let spells = spellListLevel.filter(x => !!x)
+                await actor.createEmbeddedDocuments("Item", spells);
             }
             catch (e) {
-                Utilts.notificationCreator('error', `There has been an error while creating innate spell: ${spellOject.name}`);
+                let str = `There has been an error while creating innate spells: ${spellListLevel.map(s => s?.name)}`;
+                Utilts.notificationCreator('error', str);
+                console.error(str)
                 console.error(e);
             }
 
@@ -285,6 +287,7 @@ class ItemCreator {
         }
         catch (e) {
             Utilts.notificationCreator('error', `There has been an error while creating ${itemName}`);
+            console.error(`There has been an error while creating ${itemName}`);
             console.error(e);
         }
     }
@@ -327,7 +330,16 @@ class ItemCreator {
     }
 
     _activationCost(spellJson){
+        if (!spellJson['time'] || Object.keys(spellJson['time']) == 0){
+            return {}
+        }
+
         var match = spellJson['time'].match(/(?<time>\d+) (?<unit>\w+)([,.]? (?<custom>.+))?/)
+
+        if (!match){
+            return {}
+        }
+
         return {
             type: match.groups.unit,
             cost: Number(match.groups.time),
@@ -336,6 +348,10 @@ class ItemCreator {
     }
 
     _spellDuration(spellJson){
+        if (!spellJson['duration'] || Object.keys(spellJson['duration']) == 0){
+            return {}
+        }
+
         var match = spellJson["duration"].match(/((?<cons>Concentration, )?.*((?<number>(\d+)|(one)) (?<unit>(minute|hour|round|day))s?)|(?<inst>Instantaneous)|(?<dispelled>Until dispelled)|(?<special>[Ss]pecial))/)
         if (!match || !match.groups){
             console.error(spellJson)
@@ -376,6 +392,11 @@ class ItemCreator {
     }
 
     _spellRange(spellJson){
+        if (!spellJson['range'] || Object.keys(spellJson['range']) == 0){
+            return {}
+        }
+
+
         let match = spellJson['range'].match(/(((?<number>\d+) (?<unit>(feet|mile)))|(?<self>Self)|(?<touch>Touch)|(?<sight>Sight)|(?<special>Special)|(?<unlimited>Unlimited))/)
         if (!match){
             console.error(match)
@@ -444,9 +465,20 @@ class ItemCreator {
     }
 
     _spellComponents(spellJson){
+        if (!spellJson['components'] || Object.keys(spellJson['components']) == 0){
+            return {}
+        }
+
+
         var match = spellJson.components.match(/(?<verbal>V)?(, )?(?<somatic>S)?(, )?((?<material>M) \((?<stuff>.+)\))?/)
         if(!match){
             console.error("no match for spell components")
+        }
+
+
+        let concentration;
+        if (spellJson.duration instanceof String){
+            concentration = Boolean(spellJson.duration.match(/(?<cons>Concentration)/))
         }
 
         return {
@@ -455,11 +487,15 @@ class ItemCreator {
             somatic: Boolean(match.groups.somatic),
             material: Boolean(match.groups.material),
             ritual: Boolean(/YES/i.test(spellJson.ritual)),
-            concentration: Boolean(spellJson.duration.match(/(?<cons>Concentration)/))
+            concentration,
         }
     }
 
     _spellMaterials(spellJson){
+        if (!spellJson['components'] || Object.keys(spellJson['components']) == 0){
+            return {}
+        }
+
         var match = spellJson.components.match(/M \((?<material>.+)\)/)
 
         if (!match){
@@ -486,6 +522,10 @@ class ItemCreator {
     }
 
     _spellTarget(spellJson){
+        if (!spellJson['range'] || Object.keys(spellJson['range']) == 0){
+            return {}
+        }
+
         var easy_area_check = spellJson.range.match(/\((?<number>\d+)[\- ](?<unit>foot|mile)[\- ](?<area>cone|line|cube|radius)\)/i)
         if (easy_area_check){
             return {
