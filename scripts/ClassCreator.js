@@ -71,7 +71,7 @@ class ClassCreator {
                             return `${acc}<li>${Utilts.getSubclassTextId(subclass)}</li>`;
                         }, "");
 
-                    // feature
+                    //Update subclass feature to include link to all the features
                     await feature.update({
                         'data.description.value': `${feature.data.data.description.value}<ul>${text}</ul>`
                     })
@@ -203,10 +203,17 @@ class ClassCreator {
 
     static _getSpellcasting(cls){
         if (/Warlock/i.test(cls.name)){
-            return "pact"
+            return {
+                progression: "pact",
+                ability: "cha",
+            }
         }
+
         // if (/Artificer/i.test(cls.name)){
-        //  return "artificer"
+        //     return {
+        //         progression: "artificer",
+        //         ability: "int",
+        //     }
         // }
 
         var top_slot = cls["autolevel"].find(x => {
@@ -219,26 +226,30 @@ class ClassCreator {
             return false;
         })
 
-        if (!top_slot){
-            return "none"
-        }
-
-        var slots = top_slot.slots.split(',')
-
-
-        if (slots.length == 10 && Number(slots[9]) > 0){
-            return "full"
-        }
-
-        if (slots.length == 6 && Number(slots[5]) > 0){
-            return "half"
-        }
-
-        console.warn(`Could not get caster type for ${cls.name}`)
-        return "none"
+        return {
+            progression: cls.spellProgression,
+            ability: Parser._abilitiesMap[cls.spellAbility],
+        };
 
         // No base class is a third caster
         // return "third"
+    }
+
+    static SetSpellLevels(baseClass){
+        let value = baseClass.autolevel.reduce(function(acc, element){
+                if (element.hasOwnProperty('slots')){
+                    return Math.max(acc, element.slots.split(',').length)
+                }
+
+                return acc;
+            }, 0);
+
+        if (value == 0){
+            baseClass.spellProgression = "none";
+            return;
+        }
+
+        baseClass.spellProgression = value > 8 ? "full" : "half";
     }
 
     static _findStarter(autolevel){
@@ -386,6 +397,8 @@ class ClassCreator {
                 console.warn(`Not enough data to make ${clsName}`)
                 return
             }
+
+            ClassCreator.SetSpellLevels(baseClass)
 
             options.filter(i => i !== baseClass).forEach(otherClass => {
                 if(!ClassCreator.setArrayEquality(ExpectedOtherKeys, Object.keys(otherClass))){
