@@ -476,9 +476,9 @@ class ItemCreator {
         }
 
 
-        let concentration;
-        if (spellJson.duration instanceof String){
-            concentration = Boolean(spellJson.duration.match(/(?<cons>Concentration)/))
+        let concentration = false;
+        if (spellJson.duration?.match){
+            concentration = Boolean(spellJson.duration.match(/(?<cons>Concentration)/i))
         }
 
         return {
