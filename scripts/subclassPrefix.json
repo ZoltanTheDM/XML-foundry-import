@@ -1,0 +1,15 @@
+{
+    "Barbarian": "Primal Path",
+    "Bard": "Bard College",
+    "Cleric": "Divine Domain",
+    "Druid": "Druid Circle",
+    "Fighter": "Martial Archetype",
+    "Monk": "Monastic Tradition",
+    "Paladin": "Sacred Oath",
+    "Ranger": "Ranger Archetype",
+    "Rogue": "Roguish Archetype",
+    "Sorcerer": "Sorcerous Origin",
+    "Warlock": "Otherworldly Patron",
+    "Wizard": "Arcane Tradition",
+    "Artificer": "Artificer Specialist"
+}

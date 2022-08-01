@@ -11,6 +11,8 @@ class ClassCreator {
         }
 
         let clsJson = whole.class;
+        ClassCreator.ClassList = await fetch('modules/xml-import/scripts/subclassPrefix.json')
+            .then(result => {return result.json();});
 
         let mergedClassJson = ClassCreator.MergeClasses(clsJson);
 
@@ -44,10 +46,10 @@ class ClassCreator {
 
                 //Load all the subclass features
                 for (let singleSubclass in singleClass.subclass){
-                    await (Utilts.ensureArray(singleClass.subclass[singleSubclass].features)
-                        .forEach(async function (feat){
+                    await Promise.all(Utilts.ensureArray(singleClass.subclass[singleSubclass].features)
+                        .map(async function (feat){
                             try{
-                                await ClassCreator.createClassFeature2(singleSubclass, feat, featuresPack);
+                                return ClassCreator.createClassFeature2(singleSubclass, feat, featuresPack);
                             }
                             catch(e){
                                 Utilts.notificationCreator('error', `There has been an error while creating class feature ${feat.name}`);
@@ -68,15 +70,18 @@ class ClassCreator {
         }
 
 
+        //update subclass trigger ability with subclasses
         if (createFeatures){
             await Utilts.PreloadCompendiumIndex(createSubclasses, false);
 
+            // console.log(await Promise.all(subclassRelatedFeatures));
+
             //update subclass feature to include the subclasses
-            (await Promise.all(subclassRelatedFeatures))
+            let res = (await Promise.all(subclassRelatedFeatures))
                 //remove items that are not subclass features
                 .filter(x => !!x)
                 //add subclasses to description
-                .forEach(async function([clsName, feature]){
+                .map(async function([clsName, feature]){
                     // console.log(`adding to ${feature.name} member of ${clsName}`)
                     // console.log(subclassedList.find(c => c.name == clsName))
 
@@ -85,12 +90,15 @@ class ClassCreator {
                             return `${acc}<li>${Utilts.getSubclassTextId(subclass, "Class Features")}</li>`;
                         }, "");
 
+                    // console.log(text)
+
                     //Update subclass feature to include link to all the features
-                    await feature.update({
+                    return feature.update({
                         'data.description.value': `${feature.data.data.description.value}<ul>${text}</ul>`
                     })
-                })
+                });
 
+            await Promise.all(res);
         }
 
         if (createClass){
@@ -451,21 +459,7 @@ class ClassCreator {
     }
 
     static getSubClassMap(){
-        return {
-            'Barbarian': "Primal Path",
-            'Bard': 'Bard College',
-            'Cleric': 'Divine Domain',
-            'Druid': 'Druid Circle',
-            'Fighter': 'Martial Archetype',
-            'Monk': 'Monastic Tradition',
-            'Paladin': 'Sacred Oath',
-            'Ranger': 'Ranger Archetype',
-            'Rogue': 'Roguish Archetype',
-            'Sorcerer': 'Sorcerous Origin',
-            'Warlock': 'Otherworldly Patron',
-            'Wizard': 'Arcane Tradition',
-        }
-
+        return ClassCreator.ClassList;
     }
 
     //modifies original array but *shrug*
@@ -508,7 +502,7 @@ class ClassCreator {
                     return acc;
                 }
 
-                if (usedFeatures.has(current.feature.name)){
+                if (usedFeatures.has(ClassCreator.ForceSingleName(current.feature.name))){
                     return acc;
                 }
 
