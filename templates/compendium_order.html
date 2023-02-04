@@ -1,22 +1,22 @@
 
 <style type="text/css">
-    .compendium-sort-qualifier.item{
-      border: 1px solid #c9c7b8;
-      height: 30px;
-      align-items: center;
-    }
+	.compendium-sort-qualifier.item{
+		border: 1px solid #c9c7b8;
+		height: 30px;
+		align-items: center;
+	}
 
-    .compendium-sort-qualifier.item-list {
-      padding: 0;
-      padding-left: 0;
-      margin: 0;
-      border: 0;
-      list-style: none;
-    }
+	.compendium-sort-qualifier.item-list {
+		padding: 0;
+		padding-left: 0;
+		margin: 0;
+		border: 0;
+		list-style: none;
+	}
 
-    .compendium-sort-qualifier.item-controls {
-      flex: 0 0 44px;
-    }
+	.compendium-sort-qualifier.item-controls {
+		flex: 0 0 44px;
+	}
 
 </style>
 <div>
@@ -30,8 +30,8 @@
 		<ol class="compendium-sort-qualifier autolevel-list item-list">
 			{{#each compendiums as |comp|}}
 				<li class="compendium-sort-qualifier flexrow item" id="{{comp.collection}}">
-                    <div>
-                    	<a class="compendium-target">
+					<div>
+						<a class="compendium-target">
 						{{comp.name}}
 						</a>
 					</div>
@@ -39,8 +39,8 @@
 						{{comp.type}}
 					</div>
 					<div class="compendium-sort-qualifier item-controls flexrow">
-						<a class="up-compendium-value"><i class="fas fa-plus"></i></a>
-						<a class="down-compendium-value"><i class="fas fa-minus"></i></a>
+						<a class="up-compendium-value"><i class="fa-solid fa-arrow-up"></i></a>
+						<a class="down-compendium-value"><i class="fa-solid fa-arrow-down"></i></a>
 						<a class="disable-compendium-value"><i class="fas fa-times"></i></a>
 					</div>
 				</li>

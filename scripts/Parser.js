@@ -475,25 +475,9 @@ class Parser {
     }
 
     static htmlDescription(textArray){
-        if (!textArray || Object.keys(textArray).length === 0){
-            return ""
-        }
+        const ds = Parser.getDescriptionAndSource(textArray)
 
-        if (typeof textArray === 'string' || textArray instanceof String){
-            return textArray
-        }
-
-        let value = textArray.reduce((acc, current) => {
-            if (Object.keys(current).length === 0 || /^\s*$/.test(current)){
-                return acc + "</p><p>"
-            }
-            if (acc.endsWith("<p>")){
-                return acc + current
-            }
-            return acc + "<br>" + current
-        }, "<p>");
-        value = value + "</p>"
-        return value;
+        return ds.description
     }
     /**
      * Returns a creature's spellcasting details
@@ -547,6 +531,7 @@ class Parser {
                 return;
             }
 
+            //source doesn't seem useful here
             let text = Parser.htmlDescription(ability.text)
 
             let cleanName = ability.name;
@@ -1204,18 +1189,46 @@ class Parser {
         return itr;
     }
 
-    static getDescription(actorJson){
-        let text = actorJson['description']
+    //Descriptions often contain a line of source data
+    static getDescriptionAndSource(text, stringExec=null){
 
-        if (!text){
-            return;
+        //If no description return nothing
+        if (!text || typeof text === 'object'){
+            return {
+                description: "",
+                source: ""
+            }
         }
 
+        //convert array of strings into a string
         if (Array.isArray(text)){
-            text = text.join('\n')
+
+            text = text
+                .filter(x => typeof x !== 'object')
+                .join('\n');
         }
 
-        return `<p>${text.split('\n').join('</p><p>')}</p>`
+        //perform a string specifc transformation on the string
+        if (stringExec){
+            text = stringExec(text)
+        }
+
+        let textMatcher = text.match(/(?<description>[\S\s]+)(\nSource: (?<sourceText>[\S\s]+))/i);
+
+        let source = ""
+        if (textMatcher){
+            text = textMatcher.groups.description
+            source = textMatcher.groups.sourceText
+        }
+
+        // console.log(textMatcher)
+
+        return {
+            //make some html style description
+            description: `<p>${text.split('\n').join('</p><p>')}</p>`,
+            //get the source if there is any
+            source,
+        }
     }
 
 }

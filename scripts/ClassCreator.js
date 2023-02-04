@@ -31,7 +31,7 @@ class ClassCreator {
                     //add the class features
                     .map(async function (feat){
                         try{
-                            let fullFeature = await ClassCreator.createClassFeature2(singleClass.name, feat, featuresPack);
+                            let fullFeature = await ClassCreator.createClassFeature(singleClass.name, feat, featuresPack);
 
                             if(fullFeature.name == ClassCreator.getSubClassMap()[singleClass.name]){
                                 return [singleClass.name, fullFeature]
@@ -49,7 +49,7 @@ class ClassCreator {
                     await Promise.all(Utilts.ensureArray(singleClass.subclass[singleSubclass].features)
                         .map(async function (feat){
                             try{
-                                return ClassCreator.createClassFeature2(singleSubclass, feat, featuresPack);
+                                return ClassCreator.createClassFeature(singleSubclass, feat, featuresPack);
                             }
                             catch(e){
                                 Utilts.notificationCreator('error', `There has been an error while creating class feature ${feat.name}`);
@@ -94,7 +94,7 @@ class ClassCreator {
 
                     //Update subclass feature to include link to all the features
                     return feature.update({
-                        'data.description.value': `${feature.data.data.description.value}<ul>${text}</ul>`
+                        'system.description.value': `${feature.system.description.value}<ul>${text}</ul>`
                     })
                 });
 
@@ -173,15 +173,18 @@ class ClassCreator {
 
                 let advancement = ClassCreator.getAdvancements(singleClass.subclass[singleSubclass].features, singleClass.subclass[singleSubclass].data.level)
 
+                const descriptionAndSource = Parser.getDescriptionAndSource(singleClass.subclass[singleSubclass].data.description)
+
                 let subclassData = {
                     name: singleSubclass,
                     type: "subclass",
                     img: Utilts.getImage(singleSubclass),
-                    data: {
-                        'description.value': Parser.htmlDescription(singleClass.subclass[singleSubclass].data.description),
+                    system: {
+                        description: {value: descriptionAndSource.description},
                         identifier: ClassCreator.sanitizeName(singleSubclass),
                         classIdentifier: ClassCreator.sanitizeName(singleClass.name),
                         advancement,
+                        source: descriptionAndSource.source,
                     }
                 };
 
@@ -197,15 +200,19 @@ class ClassCreator {
         return name.toLowerCase().replaceAll(' ', '-').replaceAll(/[^a-z0-9\-_]/gi, "")
     }
 
-    static async createClassFeature2(className, interData, pack){
+    static async createClassFeature(className, interData, pack){
         let name = ClassCreator.ForceSingleName(interData.name);
+
+        const descriptionAndSource = Parser.getDescriptionAndSource(interData.description)
 
         let thisClassFeature = {
             name,
             type: "feat",
-            data: {
-                'description.value': (interData.description ? Parser.htmlDescription(interData.description) : ""),
+            system: {
+                description:{value: descriptionAndSource.description},
                 requirements: `${className} ${interData.level}`,
+                type:{value:"class"},
+                source: descriptionAndSource.source,
             },
             img: Utilts.getImage("Item", ItemCreator._trimName(name).toLowerCase()),
         };
@@ -362,38 +369,6 @@ class ClassCreator {
         await pack.importDocument(item);
         // await pack.getIndex(); // Need to refresh the index to update it
         console.log(`Done importing ${thisClass.name} into ${pack.collection}`);
-    }
-
-    static async createClassFeature(feature, cls, level, pack) {
-
-        var description = ""
-        if (feature.text){
-            description = Parser.htmlDescription(feature.text);
-        }
-        else{
-            console.warn(`Malformed Feature in ${cls.name}`);
-            return;
-        }
-
-        let thisClassFeature = {
-            name: feature.name,
-            type: "feat",
-            data: {
-                description: {
-                    value: description,
-                },
-                requirements: `${cls.name} ${level}`,
-            },
-            sort: 100003
-        };
-
-        thisClassFeature.img = Utilts.getImage("Item", ItemCreator._trimName(thisClassFeature.name).toLowerCase())
-
-        let item = await Item.create(thisClassFeature, { temporary: true, displaySheet: false});
-        // console.log(item);
-        await pack.importDocument(item);
-        // await pack.getIndex(); // Need to refresh the index to update it
-        console.log(`Done importing ${thisClassFeature.name} into ${pack.collection}`);
     }
 
     //https://stackoverflow.com/questions/31128855/comparing-ecma6-sets-for-equality
