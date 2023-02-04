@@ -1,20 +1,33 @@
 {
-  "name": "xml-import",
   "title": "XML import",
-  "description": "",
-  "author": "ZoltanTheDM",
   "version": "0.7.1",
-  "esmodules": ["scripts/xml-import.js"],
-  "styles": ["styles/style.css"],
+  "esmodules": [
+    "scripts/xml-import.js"
+  ],
+  "styles": [
+    "styles/style.css"
+  ],
   "compatibility": {
-      "minimum": "9",
-      "verified": "9"
+    "minimum": "9",
+    "verified": "9"
   },
-  "minimumCoreVersion": "9",
-  "compatibleCoreVersion": "9",
-  "system": "dnd5e",
   "url": "https://github.com/ZoltanTheDM/XML-foundry-import",
   "manifest": "https://raw.githubusercontent.com/ZoltanTheDM/XML-foundry-import/main/module.json",
   "download": "https://github.com/ZoltanTheDM/XML-foundry-import/archive/main.zip",
-  "changelog": ""
+  "id": "xml-import",
+  "authors": [
+    {
+      "name": "ZoltanTheDM",
+      "flags": {}
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {}
+      }
+    ]
+  }
 }

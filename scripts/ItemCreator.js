@@ -86,9 +86,9 @@ class ItemCreator {
 
                 if (spellItem){
                     let spellObject = spellItem.toObject();
-                    spellObject.data.uses = uses;
-                    if (spellObject.data.preparation){
-                        spellObject.data.preparation.mode = use_level !== "At will" ? "innate" : "atwill";
+                    spellObject.system.uses = uses;
+                    if (spellObject.system.preparation){
+                        spellObject.system.preparation.mode = use_level !== "At will" ? "innate" : "atwill";
                     }
                     else{
                         console.error("did not have a preperation");
@@ -260,7 +260,7 @@ class ItemCreator {
      * @param actorStats - stats of the actor
      */
     async itemCreator(actor, itemName, itemData, actorStats, isReactions) {
-        var attack = this._getAttackAbility(itemData, actorStats, actor.data.data.attributes.prof, [itemName, actor.data.name]);
+        var attack = this._getAttackAbility(itemData, actorStats, actor.system.attributes.prof, [itemName, actor.name]);
         let thisItem = {
             name: itemName,
             type: itemData?.data?.damage?.[0]?.[2] ? 'weapon' : 'feat',
@@ -311,22 +311,11 @@ class ItemCreator {
     }
 
     _trimDescription(textArray){
-        if (typeof textArray === 'string' || textArray instanceof String){
-            return "<p>"+textArray.replace("At Higher Levels", "</p><p><strong>At Higher Levels</strong>")+"</p>"
-        }
 
-        let value = textArray.reduce((acc, current) => {
-            if (Object.keys(current).length === 0){
-                return acc + "</p><p>"
-            }
-            let match = current.match(/(?<hilvl>At Higher Levels\S*)(?<text>.+)/)
-            if (match){
-                return acc+"<strong>"+match.groups.hilvl+"</strong>"+match.groups.text;
-            }
-            return acc + current
-        }, "<p>");
-        value = value.concat("</p>");
-        return value;
+        const ds = Parser.getDescriptionAndSource(textArray)
+
+        return ds.description
+
     }
 
     _activationCost(spellJson){
@@ -755,13 +744,15 @@ class ItemCreator {
             return;
         }
 
+        const descriptionAndSource = Parser.getDescriptionAndSource(spellJson.text, ItemCreator.higherLevelReplace);
+
         let formulas = this._formulas(spellJson)
         let thisSpell = {
             name: this._trimName(spellJson.name),
             type: "spell",
-            data: {
+            system: {
                 description: {
-                    value: this._trimDescription(spellJson.text),
+                    value: descriptionAndSource.description,
                     chat: "",
                     unidentified: ""
                 },
@@ -778,7 +769,8 @@ class ItemCreator {
                 school: this._spellSchool(spellJson),
                 components: this._spellComponents(spellJson),
                 materials: this._spellMaterials(spellJson),
-                scaling: this._spellScaling(spellJson)
+                scaling: this._spellScaling(spellJson),
+                source: descriptionAndSource.source,
             },
             sort: 200002
         };
@@ -791,18 +783,22 @@ class ItemCreator {
         // await pack.getIndex(); // Need to refresh the index to update it
         console.log(`Done importing ${thisSpell.name} into ${pack.collection}`);
     }
-
+    
     async MakeFeats(featJson, compendiumCreator){
 
         let featPack = await compendiumCreator("-feats");
 
-        for (let feat of featJson){
+        for (let featPre of featJson){
+
+            let feat = ItemCreator.checkForClassOption(featPre)
+
             let featData = {
                 name: feat.name,
                 type: "feat",
-                data: {
-                    'description.value': feat.text,
-                    requirements: feat.prerequisite ?? "",
+                system: {
+                    description: {value: feat.text},
+                    requirements: ItemCreator.isObjEmpty(feat.prerequisite) ? "" : feat.prerequisite,
+                    type: feat.type,
                 }
             };
 
@@ -812,6 +808,51 @@ class ItemCreator {
             console.log(`Done importing ${feat.name.name} into ${featPack.collection}`);
         }
 
+    }
+
+    //Some feats are actually class feature options
+    //such as manuvers and similar
+    static checkForClassOption(feat){
+        //check for a colon starting name
+        let colonMatcher = feat.name.match(/(?<start>.+): ?(?<name>.+)/)
+
+        //compare vs classOptionMap
+        if(colonMatcher && (colonMatcher.groups?.start?.toLowerCase() in ItemCreator.classOptionMap)){
+            //remove the extra name part
+
+            feat.type = {
+                value: "class",
+                subtype: ItemCreator.classOptionMap[colonMatcher.groups.start.toLowerCase()]
+            }
+
+            //remove the name
+            feat.name = colonMatcher.groups.name
+        }
+        else{
+            //nothing special about this feat
+            feat.type = {value:"feat"}
+        }
+
+        //return modified feat object
+        return feat
+    }
+
+    //A mapping of key words to dnd5e System keys
+    static classOptionMap = {
+        infusion: "artificerInfusion",
+        invocation: "eldritchInvocation",
+        "elemental discipline": "elementalDiscipline",
+        "maneuver" : "maneuver",
+        "pact boon" : "pact",
+        rune: "rune",
+    }
+
+    static isObjEmpty (obj) {
+        return Object.keys(obj).length === 0;
+    }
+
+    static higherLevelReplace (text) {
+        return text.replace("At Higher Levels", "</p><p><strong>At Higher Levels</strong>");
     }
 }
 export default ItemCreator.getInstance();

@@ -184,7 +184,7 @@ class ActorCreator {
             },
             spellLevel: abilities?.Spellcasting?.data?.level,
             source: propsDetails.source,
-            "biography.value": propsDetails.description,
+            biography: {value: propsDetails.description},
         };
     }
     /**
@@ -264,11 +264,11 @@ class ActorCreator {
 
     static _calcArmor(props, items){
         let dexMod = Math.floor((Number(props.stats.Dex) - 10) / 2);
-        let armor = items?.find(item => item.data.armor?.type != 'shield');
+        let armor = items?.find(item => item.system.armor?.type != 'shield');
 
-        let armorValue = armor?.data.armor.value ?? 10;
-        let maxDex = armor?.data.armor.dex ?? 100;
-        let hasShield = !!items?.find(item => item.data.armor?.type == 'shield');;
+        let armorValue = armor?.system.armor.value ?? 10;
+        let maxDex = armor?.system.armor.dex ?? 100;
+        let hasShield = !!items?.find(item => item.system.armor?.type == 'shield');;
 
         return armorValue + Math.min(maxDex, dexMod) + (hasShield ? 2 : 0);
     }
@@ -366,7 +366,7 @@ class ActorCreator {
             attributes: ActorCreator._makeAttributesStructure(props, bubbleUp),
             details: ActorCreator._makeDetailsStructure(props.data.details, props.abilities),
             traits: ActorCreator._makeTraitsStructure(props.data.traits),
-            skills: ActorCreator._makeSkillsStructure(props.data.skills, props.data),
+            skills: ActorCreator._makeSkillsStructure(props.data.skills, props.proficiency),
             resources: ActorCreator._makeResourcesStructure(props.data.resources),
             spells: props.data.spellslots,
         };
@@ -380,17 +380,17 @@ class ActorCreator {
         "tiny": 0.5
     }
     static TokenCreator(actor){
-        actor.data.token.displayBars = 20;
-        actor.data.token.bar1.attribute = "attributes.hp";
+        actor.prototypeToken.displayBars = 20;
+        actor.prototypeToken.bar1.attribute = "attributes.hp";
 
-        actor.data.token.width = ActorCreator.tokenSize[actor.data.data.traits.size];
-        actor.data.token.height = ActorCreator.tokenSize[actor.data.data.traits.size];
+        actor.prototypeToken.width = ActorCreator.tokenSize[actor.system.traits.size];
+        actor.prototypeToken.height = ActorCreator.tokenSize[actor.system.traits.size];
 
-        if (actor.data.data.resources?.legact?.max > 0){
-            actor.data.token.bar2.attribute = "resources.legact";
+        if (actor.system.resources?.legact?.max > 0){
+            actor.prototypeToken.bar2.attribute = "resources.legact";
         }
-        else if (actor.data.data.resources?.legres?.max > 0){
-            actor.data.token.bar2.attribute = "resources.legres";
+        else if (actor.system.resources?.legres?.max > 0){
+            actor.prototypeToken.bar2.attribute = "resources.legres";
         }
     }
     /**
@@ -401,6 +401,8 @@ class ActorCreator {
      */
     static _makeProps(actorJson) {
         const typeAndSource = Parser.getCreatureTypeAndSource(actorJson);
+        const descriptionAndSource = Parser.getDescriptionAndSource(actorJson['description'])
+
         const legend = Parser.getLegendaryActions(actorJson);
         const props = {
             name: Parser.getCreatureName(actorJson),
@@ -423,8 +425,9 @@ class ActorCreator {
                     type: typeAndSource['type'],
                     subtype: typeAndSource['subtype'],
                     challenge: Parser.getChallenge(actorJson),
-                    source: typeAndSource['source'],
-                    description: Parser.getDescription(actorJson),
+                    //source could appear in multiple places, I think
+                    source: typeAndSource['source'] ?? descriptionAndSource['source'],
+                    description: descriptionAndSource['description'],
                 },
                 traits: {
                     size: Parser.getCreatureSize(actorJson),
@@ -461,7 +464,7 @@ class ActorCreator {
             type: "npc",
             img: Utilts.getImage("Actor", props.name),
             sort: 12000,
-            data: ActorCreator._makeDataStructure(props, bubbleUp),
+            system: ActorCreator._makeDataStructure(props, bubbleUp),
             token: {},
             items: [],
             flags: {},
@@ -472,6 +475,8 @@ class ActorCreator {
         //for some reason I can't add a temporary actor
         //to a compendium...
         const temporary = false;
+
+        // console.log(actor_struct);
 
         let actor = await Actor.create(actor_struct, { displaySheet: false, temporary: temporary });
         // console.log(actor)
@@ -542,14 +547,14 @@ class ActorCreator {
 
             ActorCreator.ArmorData = {};
             for (const item of PossibleArmor){
-                let data = (await Utilts.getItemData(item)).data
+                let data = (await Utilts.getItemData(item))
 
                 if (!data){
                     console.warn(`Did not find data for ${item}`);
                 }
                 else{
-                    data.data.equipped = true;
-                    data.data.proficient = true;
+                    data.system.equipped = true;
+                    data.system.proficient = true;
                     ActorCreator.ArmorData[item] = data;
                 }
             }
