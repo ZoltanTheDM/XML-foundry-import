@@ -307,7 +307,7 @@ class ItemCreator {
     }
 
     _trimName(spellName){
-        return spellName.match(/^(?<name>\w([\w'\- ]*\w)?)( \(.+\))?/).groups.name
+        return spellName.match(/^(?<name>\w([\w'\- \/]*\w)?)( \(.+\))?/).groups.name
     }
 
     _trimDescription(textArray){

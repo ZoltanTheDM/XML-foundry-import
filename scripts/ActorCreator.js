@@ -401,6 +401,7 @@ class ActorCreator {
      */
     static _makeProps(actorJson) {
         const typeAndSource = Parser.getCreatureTypeAndSource(actorJson);
+
         const descriptionAndSource = Parser.getDescriptionAndSource(actorJson['description'])
 
         const legend = Parser.getLegendaryActions(actorJson);
@@ -450,6 +451,8 @@ class ActorCreator {
 
     static async createActor(actorJson, pack) {
         await ActorCreator.LoadArmorData();
+
+        // console.log(actorJson)
 
         const props = ActorCreator._makeProps(actorJson);
 
