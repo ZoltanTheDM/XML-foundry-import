@@ -24,17 +24,16 @@ It took on the order of **15 minutes** to complete several hundred monsters.
 
 ## Future Work
 
-* Import classes
 * Import Vehicles
 * Import items
 * For some reason I have been unable to create temporary actors and add them to a compendium. For now they are created and deleted when they are added to the compendium. This deleting breaks if there is an error thrown. Which has led to a bunch of actors created and never deleted...
 * A progress bar/inidicator
 * A stop in progress import button
 * performance increase by using paralellism
-* Get data about Source
 * Cantrip scaling seems incomplete and hard to read depending on the source
 * Verify class spells are correct
 * Make the code more readable
+* Needs Tests!
 
 ## Credit
 
