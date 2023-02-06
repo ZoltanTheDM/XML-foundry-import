@@ -1193,7 +1193,7 @@ class Parser {
     static getDescriptionAndSource(text, stringExec=null){
 
         //If no description return nothing
-        if (!text || typeof text === 'object'){
+        if (!text || !(Array.isArray(text) || typeof text === "string")){
             return {
                 description: "",
                 source: ""
