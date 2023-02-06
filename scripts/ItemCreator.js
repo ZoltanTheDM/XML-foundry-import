@@ -792,13 +792,16 @@ class ItemCreator {
 
             let feat = ItemCreator.checkForClassOption(featPre)
 
+            const ds = Parser.getDescriptionAndSource(feat.text)
+
             let featData = {
                 name: feat.name,
                 type: "feat",
                 system: {
-                    description: {value: feat.text},
+                    description: {value: ds.description},
                     requirements: ItemCreator.isObjEmpty(feat.prerequisite) ? "" : feat.prerequisite,
                     type: feat.type,
+                    source: ds.source,
                 }
             };
 

@@ -379,7 +379,7 @@ class ClassCreator {
     static MergeClasses(clsJson){
         let classesCombined = [];
 
-        const ClassSet = new Set(clsJson.map(ele => ele.name));
+        let ClassSet = new Set(Utilts.ensureArray(clsJson).map(ele => ele.name))
 
         const ExpectedOtherKeys = new Set(['name', 'autolevel']);
 
