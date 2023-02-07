@@ -433,16 +433,16 @@ class Parser {
         return;
     }
     static getAttackType(text, attackObject){
-        if (/^Melee Spell Attack/i.test(text)){
+        if (/Melee Spell Attack/i.test(text)){
             return "msak";
         }
-        if (/^Ranged Spell Attack/i.test(text)){
+        if (/Ranged Spell Attack/i.test(text)){
             return "rsak";
         }
-        if (/^Melee Weapon Attack/i.test(text)){
+        if (/Melee Weapon Attack/i.test(text)){
             return "mwak";
         }
-        if (/^Ranged Weapon Attack/i.test(text)){
+        if (/Ranged Weapon Attack/i.test(text)){
             return "rwak";
         }
 
