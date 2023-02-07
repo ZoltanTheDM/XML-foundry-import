@@ -261,6 +261,9 @@ class ItemCreator {
      */
     async itemCreator(actor, itemName, itemData, actorStats, isReactions) {
         var attack = this._getAttackAbility(itemData, actorStats, actor.system.attributes.prof, [itemName, actor.name]);
+
+        console.log(itemData)
+
         let thisItem = {
             name: itemName,
             type: itemData?.data?.damage?.[0]?.[2] ? 'weapon' : 'feat',
@@ -282,6 +285,7 @@ class ItemCreator {
 
         Object.assign(thisItem.data, this._makeRangeTargetStructure(itemData?.['data']?.['range']));
 
+        console.log(thisItem)
         try {
             await actor.createEmbeddedDocuments("Item", [thisItem]);
         }
