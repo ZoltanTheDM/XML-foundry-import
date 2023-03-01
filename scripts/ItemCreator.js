@@ -262,8 +262,6 @@ class ItemCreator {
     async itemCreator(actor, itemName, itemData, actorStats, isReactions) {
         var attack = this._getAttackAbility(itemData, actorStats, actor.system.attributes.prof, [itemName, actor.name]);
 
-        console.log(itemData)
-
         let thisItem = {
             name: itemName,
             type: itemData?.data?.damage?.[0]?.[2] ? 'weapon' : 'feat',
@@ -285,7 +283,6 @@ class ItemCreator {
 
         Object.assign(thisItem.data, this._makeRangeTargetStructure(itemData?.['data']?.['range']));
 
-        console.log(thisItem)
         try {
             await actor.createEmbeddedDocuments("Item", [thisItem]);
         }
@@ -790,7 +787,7 @@ class ItemCreator {
     
     async MakeFeats(featJson, compendiumCreator){
 
-        let featPack = await compendiumCreator("-feats");
+        let featPack = await compendiumCreator("-feats", "Item");
 
         for (let featPre of featJson){
 
@@ -815,6 +812,124 @@ class ItemCreator {
             console.log(`Done importing ${feat.name.name} into ${featPack.collection}`);
         }
 
+    }
+
+    static traitToHtml(trait){
+        return "<h2>" + trait.name + "</h2>" + trait.text;
+    }
+
+    async MakeBackground(backgroundJson, compendiumCreator){
+        let backgroundPack = await compendiumCreator("-backgrounds", "Item");
+        let rollTablesPack = await compendiumCreator("-rollTable", "RollTable");
+
+        for (let background of backgroundJson){
+
+            let ds;
+            let traits = [];
+            let features = [];
+
+            for (let trait of Utilts.ensureArray(background.trait)){
+                if (trait.name == 'Description'){
+                    //standard blurb
+                    ds = Parser.getDescriptionAndSource(trait.text)
+                }
+                else if (trait.name.startsWith("Feature:")){
+                    //make a background feature, return the compendium item
+                    features.push(ItemCreator.MakeBackgroundFeature(trait, background.name, ds?.source, backgroundPack));
+                }
+                else{
+                    //other traits, including roll tables etc...
+                    //finds and returns the roll table
+                    let newTrait = await ItemCreator.DetermineRollTable(trait, background.name, rollTablesPack)
+                    traits.push(newTrait);
+                }
+            }
+
+            let descriptionString = [ds.description, ...traits].join("<hr>");
+
+            features = await Promise.all(features);
+
+            features.map(feat => feat.uuid)
+
+            let backgroundData = {
+                name: background.name,
+                type: "background",
+                system: {
+                    description: {value: descriptionString},
+                    source: ds.source,
+                    advancement: [{
+                        "type": "ItemGrant",
+                        "configuration": {
+                            "items": features.map(feat => feat.uuid),
+                            "optional": false,
+                        },
+                        "level": 0,
+                        "title": "Feature"
+                    }]
+                }
+            };
+
+            let item = await Item.create(backgroundData, {temporary: true, displaySheet:false});
+
+            await backgroundPack.importDocument(item);
+
+            console.log(`Done importing ${background.name.name} into ${backgroundPack.collection}`);
+        }
+    }
+
+    static async MakeBackgroundFeature(trait, requirement, source, backgroundPack){
+
+        let featData = {
+            name: trait.name.slice("Feature: ".length),
+            type: "feat",
+            system: {
+                description: {value: trait.text},
+                requirements: requirement,
+                type: {value: "background"},
+                source: source,
+            }
+        };
+
+        let item = await Item.create(featData, {temporary: true, displaySheet:false});
+
+        return await backgroundPack.importDocument(item);
+    }
+
+    static async DetermineRollTable(inputTrait, sourceName, rollTablesPack){
+        let text = inputTrait.text;
+
+        let tablesMatcher = text.matchAll(/d(?<dice>\d+) \| (?<tableName>[^\n]+)(?<table>(\n\d+ \| [^\n]+)+)/g);
+
+        for (let match of tablesMatcher){
+
+            let linesMatcher = match.groups.table.matchAll(/(?<die>\d+) \| (?<text>[^\n]+)/g);
+
+            function lineToReuslt(lineMatch){
+                let value = parseInt(lineMatch.groups.die);
+                return {
+                    type: 0,
+                    weight: 1,
+                    range: [value, value],
+                    text: lineMatch.groups.text,
+                }
+            }
+
+            let tableData = {
+                name: `${match.groups.tableName} (${sourceName})`,
+                formula: `1d${match.groups.dice}`,
+                replacement: true,
+                displayRoll: true,
+                results: [...linesMatcher].map(lineToReuslt)
+            }
+
+            let rt = await RollTable.create(tableData, {temporary: true, displaySheet:false});
+
+            let newRollTable = await rollTablesPack.importDocument(rt);
+
+            text = text.replace(match[0], "<br>"+newRollTable.link);
+        }
+
+        return `<h2>${inputTrait.name}</h2>${text}`;
     }
 
     //Some feats are actually class feature options

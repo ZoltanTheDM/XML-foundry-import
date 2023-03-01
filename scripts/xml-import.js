@@ -43,6 +43,7 @@ class XmlImporter extends Application
       let inputXML = html.find('[name=all-xml]').val();
       let adder = {
         features: html.find('[name=featuresButton]').is(':checked'),
+        backgrounds: html.find('[name=backgroundsButton]').is(':checked'),
         classes: html.find('[name=classButton]').is(':checked'),
         subclass: html.find('[name=subclassButton]').is(':checked'),
         spells: html.find('[name=spellsButton]').is(':checked'),
@@ -86,6 +87,10 @@ class XmlImporter extends Application
 
     if (adder.feats && wholeJson['feat']){
       await ItemCreator.MakeFeats(Utilts.ensureArray(wholeJson['feat']), name => XmlImporter.getCompendiumWithType(compendiumName+name, "Item"));
+    }
+
+    if (adder.backgrounds && wholeJson['background']){
+      await ItemCreator.MakeBackground(Utilts.ensureArray(wholeJson['background']), (name, type) => XmlImporter.getCompendiumWithType(compendiumName+name, type));
     }
 
     if (adder.spells && wholeJson["spell"]){
