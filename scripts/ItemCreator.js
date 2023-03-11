@@ -50,22 +50,18 @@ class ItemCreator {
      */
     async spellsAdder(actor, spells) {
         if (!spells || Object.keys(spells).length == 0)
-            return;
+            return [];
+
         const spellList = await this._prepareSpellsObject(spells, actor.name);
-        for (var spell of spellList){
-            try {
-                await actor.createEmbeddedDocuments("Item", [spell.toObject()]);
-            }
-            catch (e) {
-                Utilts.notificationCreator('error', `There has been an error while creating ${itemName}`);
-                console.error(e);
-            }
-        }
+
+        return spellList.map(spell => spell.toObject());
     }
 
     async innateAdder(actor, spellsDetails) {
         if (!spellsDetails || Object.keys(spellsDetails).length == 0)
-            return;
+            return [];
+
+        let innates = [];
 
         for (var use_level in spellsDetails){
             var uses = {
@@ -105,19 +101,11 @@ class ItemCreator {
 
             let spellListLevel = await Promise.all(spellsDetails[use_level].map(getSpellData));
 
-            try {
-                //remeber to filter out the spells that were not found
-                let spells = spellListLevel.filter(x => !!x)
-                await actor.createEmbeddedDocuments("Item", spells);
-            }
-            catch (e) {
-                let str = `There has been an error while creating innate spells: ${spellListLevel.map(s => s?.name)}`;
-                Utilts.notificationCreator('error', str);
-                console.error(str)
-                console.error(e);
-            }
+            innates.push(spellListLevel.filter(x => !!x));
 
         };
+
+        return innates.reduce((acc, val) => acc.concat(val), [])
     }
     /**
      * Removes the to hit value from the damage array
@@ -266,6 +254,7 @@ class ItemCreator {
             name: itemName,
             type: itemData?.data?.damage?.[0]?.[2] ? 'weapon' : 'feat',
             data: {
+                type: {value: 'monster'},
                 description: { value: itemData['description'] },
                 activation: this._getActivation(itemData, isReactions),
                 ability: attack.ability,
@@ -283,14 +272,7 @@ class ItemCreator {
 
         Object.assign(thisItem.data, this._makeRangeTargetStructure(itemData?.['data']?.['range']));
 
-        try {
-            await actor.createEmbeddedDocuments("Item", [thisItem]);
-        }
-        catch (e) {
-            Utilts.notificationCreator('error', `There has been an error while creating ${itemName}`);
-            console.error(`There has been an error while creating ${itemName}`);
-            console.error(e);
-        }
+        return thisItem;
     }
     /**
      * Adds all abilities to the actor
@@ -300,11 +282,15 @@ class ItemCreator {
      * @param actorStats - stats of the actor
      */
     async abilitiesAdder(actor, abilities, actorStats, isReactions) {
+        let items = []
+
         for (const key in abilities) {
             if (abilities.hasOwnProperty(key)){
-                await this.itemCreator(actor, key, abilities[key], actorStats, isReactions);
+                items.push(this.itemCreator(actor, key, abilities[key], actorStats, isReactions));
             }
         }
+
+        return items
     }
 
     _trimName(spellName){

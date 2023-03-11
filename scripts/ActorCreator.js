@@ -458,53 +458,58 @@ class ActorCreator {
 
         let bubbleUp = {};
 
-        // ActorCreator._makeDataStructure(props, bubbleUp);
-        // console.log(ActorCreator._makeDataStructure(props, bubbleUp))
-        // return;
-
         let actor_struct = {
             name: props.name,
             type: "npc",
             img: Utilts.getImage("Actor", props.name),
-            sort: 12000,
             system: ActorCreator._makeDataStructure(props, bubbleUp),
-            token: {},
-            items: [],
-            flags: {},
             // folder: "KExLZFbww2G4bns4",
         }
 
 
-        //for some reason I can't add a temporary actor
-        //to a compendium...
-        const temporary = false;
+        let temp_actor = await Actor.create(actor_struct, { displaySheet: false, temporary: true });
 
-        // console.log(actor_struct);
+        let actor = await pack.importDocument(temp_actor);
 
-        let actor = await Actor.create(actor_struct, { displaySheet: false, temporary: temporary });
-        // console.log(actor)
-        if (props.abilities)
-            await ItemCreator.abilitiesAdder(actor, props.abilities, props.stats, false);
+        let itemListsToAdd = [];
+
+
+        if (props.abilities){
+            itemListsToAdd.push(ItemCreator.abilitiesAdder(actor, props.abilities, props.stats, false));
+        }
         if (props.legendaryActions){
             if(props.legendaryActions.legend){
-                await ItemCreator.abilitiesAdder(actor, props.legendaryActions.legend, props.stats, false);
+                itemListsToAdd.push(ItemCreator.abilitiesAdder(actor, props.legendaryActions.legend, props.stats, false));
             }
 
             if(props.legendaryActions.lair){
-                await ItemCreator.abilitiesAdder(actor, props.legendaryActions.lair, props.stats, false);
+                itemListsToAdd.push(ItemCreator.abilitiesAdder(actor, props.legendaryActions.lair, props.stats, false));
             }
 
             if (props.legendaryActions.region){
-                await ItemCreator.itemCreator(actor, props.legendaryActions.region.name, props.legendaryActions.region, props.stats, false);
+                itemListsToAdd.push([ItemCreator.itemCreator(actor, props.legendaryActions.region.name, props.legendaryActions.region, props.stats, false)]);
             }
         }
-        if (props.reactions)
-            await ItemCreator.abilitiesAdder(actor, props.reactions, props.stats, true);
+        if (props.reactions){
+            itemListsToAdd.push(ItemCreator.abilitiesAdder(actor, props.reactions, props.stats, true));
+        }
         if (props.spells){
-            await ItemCreator.spellsAdder(actor, props.spells);
+            itemListsToAdd.push(ItemCreator.spellsAdder(actor, props.spells));
         }
         if (props.innate){
-            await ItemCreator.innateAdder(actor, props.innate);
+            itemListsToAdd.push(ItemCreator.innateAdder(actor, props.innate));
+        }
+
+        let itemsToAdd = await Promise.all([].concat(...(await Promise.all(itemListsToAdd))));
+
+        try {
+            await actor.createEmbeddedDocuments("Item", itemsToAdd);
+        }
+        catch (e) {
+            let str = `There has been an error while creating items in ${props.name}`;
+            Utilts.notificationCreator('error', str);
+            console.error(str)
+            console.error(e);
         }
 
         if (bubbleUp.itemsOut && bubbleUp.itemsOut.length > 0){
@@ -514,18 +519,6 @@ class ActorCreator {
             //so update the item so it is
             await actor.updateEmbeddedDocuments("Item", res.map(item => {return {_id: item.id, 'data.equipped':true, 'data.proficient':true, }}));
         }
-
-        ActorCreator.TokenCreator(actor)
-
-        // console.log(actor);
-        await pack.importDocument(actor);
-
-        if (!temporary){
-            //delete the actor if it is not temporary
-            actor.delete();
-        }
-
-        // await pack.getIndex(); // Need to refresh the index to update it
 
         console.log(`Done importing ${props.name} into ${pack.collection}`);
     }

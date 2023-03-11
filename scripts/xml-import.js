@@ -79,9 +79,6 @@ class XmlImporter extends Application
       return;
     }
 
-    // console.log(wholeJson)
-    // return;
-
     await Utilts.PreloadCompendiumIndex();
 
     const debug = true;

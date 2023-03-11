@@ -26,6 +26,7 @@ It took on the order of **15 minutes** to complete several hundred monsters.
 
 * A progress bar/inidicator
 * A stop in progress import button
+* Import Races
 * Import Vehicles properly
 * Handle magical weapon damage
 * For some reason I have been unable to create temporary actors and add them to a compendium. For now they are created and deleted when they are added to the compendium. This deleting breaks if there is an error thrown. Which has led to a bunch of actors created and never deleted...
