@@ -1213,7 +1213,7 @@ class Parser {
             text = stringExec(text)
         }
 
-        let textMatcher = text.match(/(?<description>[\S\s]+)(\nSource: (?<sourceText>[\S\s]+))/i);
+        let textMatcher = text.match(/(?<description>[\S\s]*)(\n?Source: (?<sourceText>[\S\s]+))/i);
 
         let source = ""
         if (textMatcher){

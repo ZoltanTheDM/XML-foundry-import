@@ -1,6 +1,5 @@
 {
   "title": "XML import",
-  "description": "",
   "version": "0.8.2",
   "esmodules": [
     "scripts/xml-import.js"

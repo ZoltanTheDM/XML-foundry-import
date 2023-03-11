@@ -932,6 +932,233 @@ class ItemCreator {
         return `<h2>${inputTrait.name}</h2>${text}`;
     }
 
+    async MakeItems(itemsJson, compendiumCreator){
+        let itemPack = await compendiumCreator("-items", "Item");
+
+        for (let item of itemsJson){
+
+            // console.log(item)
+
+            //get description and source data
+            const ds = Parser.getDescriptionAndSource(item.text)
+
+            //get data unique to item types
+            const sub = ItemCreator.toItemType(item);
+
+            //All items inculde the following stuff
+            let itemData = {
+                name: item.name,
+                system:{
+                    description:{value: ds.description},
+                    source: ds.source,
+                },
+                img: Utilts.getImage("Item", item.name),
+            };
+
+            //not all items have a value
+            if (item.value && typeof(item.value) == "string"){
+                itemData.system.price = {value: parseFloat(item.value)};
+            }
+
+            //not all items have a weight
+            if (item.weight && typeof(item.weight) == "string"){
+                itemData.system.weight = parseFloat(item.weight);
+            }
+
+            //merge common data and specific data
+            let fullItemData = mergeObject(itemData, sub, {recursive: true, insertKeys: true, insertValues: true, overwrite: true});
+
+            // console.log(fullItemData);
+
+            //create the item
+            let itemTemp = await Item.create(fullItemData, {temporary: true, displaySheet:false});
+
+            await itemPack.importDocument(itemTemp);
+            console.log(`Done importing ${item.name} into ${itemPack.collection}`);
+        }
+
+    }
+
+
+
+    static toItemType(item) {
+
+        //check for item detials
+        if (item.detail && Object.keys(item.detail).length > 0){
+            let details = item.detail.split(', ');
+
+            // ItemCreator.details = new Set([...ItemCreator.details, item.detail])
+
+            //block for weapons (including Staffs)
+            if (details.includes('Melee Weapon')){
+                if (details.includes('martial Weapon')){
+                    return ItemCreator.weaponFunc("martialM", "mwak", item);
+                }
+                else if (details.includes('simple Weapon')){
+                    return ItemCreator.weaponFunc("simpleM", "mwak", item);
+                }
+                else{
+                    return ItemCreator.weaponFunc("simpleM", "mwak", item);
+                }
+            }
+            else if (details.includes('Staff')){
+                    return ItemCreator.weaponFunc("simpleM", "mwak", item);
+            }
+            else if (details.includes('Ranged Weapon')){
+                if (details.includes('martial Weapon')){
+                    return ItemCreator.weaponFunc("martialR", "rwak", item);
+                }
+                else if (details.includes('simple Weapon')){
+                    return ItemCreator.weaponFunc("simpleR", "rwak", item);
+                }
+                else{
+                    return ItemCreator.weaponFunc("simpleR", "rwak", item);
+                }
+            }
+
+            //block for armor (including Shields)
+            if (details.includes('Light Armor')){
+                return ItemCreator.armorFunc("light", item);
+            }
+            else if (details.includes('Medium Armor')){
+                return ItemCreator.armorFunc("medium", item);
+            }
+            else if (details.includes('Heavy Armor')){
+                return ItemCreator.armorFunc("heavy", item);
+            }
+            else if (details.includes('Shield')){
+                return ItemCreator.armorFunc("shield", item);
+            }
+
+            //Some descriptions have specific item types
+            const ItemTypeMap = {
+                Ammunition: {type: 'consumable', system:{consumableType: 'ammo'}},
+                'Gaming Set': {type: 'tool', system:{toolType: "game"}},
+                'Instrument': {type: 'tool', system:{toolType: "music"}},
+                'Artisan Tools': {type: 'tool', system:{toolType: "tool"}},
+                Poison: {type: 'consumable', system:{consumableType: 'poison'}},
+                'Trade Good': {type: 'loot'},
+                Tools: {type: 'tool'},
+                'Food and Drink': {type: 'consumable', system:{consumableType: "food"}},
+                'Spellcasting Focus': {type: 'equipment', system:{armor:{type:"trinket"}}},
+                'Wondrous item (tattoo)': {type: 'equipment', system:{armor:{type:"trinket"}}},
+            }
+
+            for (let detail of details){
+                if (Object.keys(ItemTypeMap).includes(detail)){
+                    return ItemTypeMap[detail];
+                }
+            }
+
+
+        }
+
+        //special case, some range weapons don't have details
+        if (item.type == 'R'){
+            return ItemCreator.weaponFunc("martialR", "rwak", item);
+        }
+
+        //If nothing else has worked yet check the item type
+        const ItemTypeMap = {
+            P: {type: 'consumable', system:{consumableType: 'potion'}},
+            "$": {type: 'loot'},
+            W: {type: 'equipment', system:{armor:{type:"trinket"}}},
+            WD: {type: 'consumable', system:{consumableType: 'wand'}},
+            RG: {type: 'equipment', system:{armor:{type:"trinket"}}},
+            SC: {type: 'consumable', system:{consumableType: 'scroll'}},
+            RD: {type: 'consumable', system:{consumableType: 'rod'}},
+        }
+
+        if (Object.keys(ItemTypeMap).includes(item.type)){
+            return ItemTypeMap[item.type];
+        }
+        
+        // console.log(item.detail)
+        // console.log(item);
+
+        //default to equipement trinket
+        return {type: 'equipment', system:{armor:{type:"trinket"}}};
+    }
+
+    //helper function for armor
+    static armorFunc(type, item){
+        let tempArr = {type: 'equipment', system:{
+            armor:{type, value:parseInt(item.ac)},
+            stealth: !!item.stealth,
+            strength: ((item.strength && typeof(item.strength) === 'string') ? parseInt(item.strength) : null),
+        }};
+
+        return tempArr;
+    }
+
+    //helper function for weapons
+    static weaponFunc(type, action, item){
+        const weap = {system:{
+            weaponType: type,
+            actionType: action,
+        }};
+        const weap2 = ItemCreator.weaponDetails(item);
+
+        return mergeObject(weap, weap2, {recursive: true, insertKeys: true, insertValues: true, overwrite: true});
+    }
+
+    //get all weapon details
+    static weaponDetails(item){
+        const DamageTypeMap = {
+            S: 'slashing',
+            B: 'bludgeoning',
+            P: 'piercing',
+        }
+
+        //check weapon properties
+        let properties = {};
+        if (typeof(item.property) === "string"){
+            const propertiesMap = {
+                'V': 'ver',
+                'M': 'mgc',
+                'A': 'amm',
+                'LD': 'rel',
+                'L': 'lgt',
+                'F': 'fin',
+                'T': 'thr',
+                'S': 'spc',
+                '2H': 'two',
+                'H': 'hvy',
+                'R': 'rch',
+            };
+
+            properties = item.property.split(',').reduce((acc, p) => {
+
+                acc[propertiesMap[p]] = true;
+                return acc;
+            }, {});
+        }
+
+        //get simple weapon damages
+        let temp = {type: 'weapon', system:{
+            activation: {type: 'action'},
+            damage: {parts: [[item.dmg1, DamageTypeMap[item.dmgType]]]},
+            properties,
+        }}
+
+        //get simple versatile damages
+        if (item.dmg2){
+            temp.versatile = item.dmg2;
+        }
+
+        //get range values
+        if (item.range){
+            let RangeMatch = item.range.match(/(?<close>\d+)\/(?<far>\d+)/);
+            temp.system.range = {
+                value: parseInt(RangeMatch.groups.close),
+                long: parseInt(RangeMatch.groups.far),
+                units: 'ft',
+            };
+        }
+
+        return temp;
+    }
+
     //Some feats are actually class feature options
     //such as manuvers and similar
     static checkForClassOption(feat){
