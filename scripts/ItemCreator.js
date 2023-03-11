@@ -253,7 +253,7 @@ class ItemCreator {
         let thisItem = {
             name: itemName,
             type: itemData?.data?.damage?.[0]?.[2] ? 'weapon' : 'feat',
-            data: {
+            system: {
                 type: {value: 'monster'},
                 description: { value: itemData['description'] },
                 activation: this._getActivation(itemData, isReactions),
@@ -270,7 +270,7 @@ class ItemCreator {
 
         thisItem.img = Utilts.getImage("Item", thisItem.name);
 
-        Object.assign(thisItem.data, this._makeRangeTargetStructure(itemData?.['data']?.['range']));
+        Object.assign(thisItem.system, this._makeRangeTargetStructure(itemData?.['data']?.['range']));
 
         return thisItem;
     }
