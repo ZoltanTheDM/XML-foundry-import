@@ -11,13 +11,15 @@ class ActorCreator {
      * @private
      */
     static _makeAbilitiesStructure(stats, saves, proficiency) {
+
         const abilitiesObject = {};
         for (const stat in stats) {
             if (!stats.hasOwnProperty(stat))
                 continue;
+
             abilitiesObject[stat.toLowerCase()] = {
                 value: Number(stats[stat]),
-                proficient: saves ? saves[stat] ? 1 : 0 : 0,
+                proficient: saves ? saves[stat.toLowerCase()] ? 1 : 0 : 0,
                 prof: proficiency
             };
         }
@@ -465,7 +467,6 @@ class ActorCreator {
             system: ActorCreator._makeDataStructure(props, bubbleUp),
             // folder: "KExLZFbww2G4bns4",
         }
-
 
         let temp_actor = await Actor.create(actor_struct, { displaySheet: false, temporary: true });
 
