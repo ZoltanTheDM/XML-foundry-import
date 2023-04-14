@@ -47,7 +47,7 @@ class ActorCreator {
      * @param modifiers - an object with all the damage modifiers of the creature
      * @private
      */
-    static default_resistances = ['acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning', 'necrotic', 'piercing', 'poison', 'psychic', 'radiant', 'slashing', 'thunder', 'physical']
+    static default_resistances = ['acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning', 'necrotic', 'piercing', 'poison', 'psychic', 'radiant', 'slashing', 'thunder']
     static conditions_default = ['blinded', 'charmed', 'deafened', 'diseased', 'exhaustion', 'frightened', 'grappled', 'incapacitated', 'invisible', 'paralyzed', 'petrified', 'poisoned', 'prone', 'restrained', 'stunned', 'unconscious']
     static _makeResistancesStructure(modifiers) {
         const structure = {};
@@ -68,53 +68,50 @@ class ActorCreator {
             all = all.replace("bludgenoning", "bludgeoning");
             all = all.replace("blugdeoning", "bludgeoning");
 
-            //search for non-magical attack damage
-            var match = all.search(/((bludgeoning, piercing, (and )?slashing)|(bludgeoning piercing and slashing)|(piercing and slashing))( damage)? ((from .+ (weapons|attacks))|(that is nonmagical))/)
+            //search for bypasses
+            var match = all.search(/( damage)? ((from .+ (weapons|attacks))|(that is nonmagical)).*/)
 
-            var fromWeapons = null;
+            let bypasses = []
             if (match != -1){
-                let temp = all.slice(match);
+                var bypassText = all.slice(match)
 
-                if (temp.match(/^bludgeoning,? piercing,? (and )?slashing from nonmagical attacks$/)){
-                    //there are no special features of this non-magical resistance
+                if (bypassText.includes('nonmagical')){
+                    bypasses.push("mgc");
                 }
-                else{
-                    fromWeapons = all.slice(match)
+
+                if (bypassText.includes('silver')){
+                    bypasses.push("sil");
+                }
+
+                if (bypassText.includes('adamantine')){
+                    bypasses.push("ada");
                 }
 
                 all = all.slice(0,match)
-                all = all.concat(",physical");
             }
 
+            
             var standards = [];
-            const spliters = /[,;.] ?/
+            const spliters = /([,;.]|and)/
             var custom = all.split(spliters);
+
+            //find list of custom entries
             for (var i = custom.length - 1; i >= 0; i--){
                 if (defaults.includes(custom[i].trim())){
                     standards.push(custom.splice(i, 1)[0]);
                 }
-            }
-
-            if(standards.length == 0){
-                standards = ""
-            }
-            else if (standards.length == 1){
-                standards = standards[0]
-            }
-
-            // if (custom.length > 0 && !(custom.length == 1 && /^\s*$/.test(custom[0])) ){
-            //     console.error(custom);
-            // }
-
-            if (fromWeapons){
-                custom.push(fromWeapons)
+                else if (custom[i].match(spliters)){
+                    custom.splice(i, 1)
+                }
             }
 
             structure[Parser.convertResistance(key)] = {
                 value: standards,
+                bypasses,
                 custom: custom.join(';')
             };
         }
+
         return structure;
     }
     /**
