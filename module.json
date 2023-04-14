@@ -1,6 +1,6 @@
 {
   "title": "XML import",
-  "version": "0.8.2",
+  "version": "0.9.1",
   "esmodules": [
     "scripts/xml-import.js"
   ],
@@ -12,8 +12,8 @@
     "verified": "10"
   },
   "url": "https://github.com/ZoltanTheDM/XML-foundry-import",
-  "manifest": "https://raw.githubusercontent.com/ZoltanTheDM/XML-foundry-import/0.8.2/module.json",
-  "download": "https://github.com/ZoltanTheDM/XML-foundry-import/archive/0.8.2.zip",
+  "manifest": "https://raw.githubusercontent.com/ZoltanTheDM/XML-foundry-import/main/module.json",
+  "download": "https://github.com/ZoltanTheDM/XML-foundry-import/archive/main.zip",
   "id": "xml-import",
   "authors": [
     {
@@ -26,7 +26,10 @@
       {
         "id": "dnd5e",
         "type": "system",
-        "compatibility": {}
+        "compatibility": {
+          "minimum": "2.1.0",
+          "verified": "2.1.5"
+        }
       }
     ]
   }

@@ -90,7 +90,6 @@ class ActorCreator {
                 all = all.slice(0,match)
             }
 
-            
             var standards = [];
             const spliters = /([,;.]|and)/
             var custom = all.split(spliters);
