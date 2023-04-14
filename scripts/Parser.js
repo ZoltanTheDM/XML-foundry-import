@@ -251,7 +251,7 @@ class Parser {
             saveString = json['save']
         }
 
-        const savesMatch = [...saveString.matchAll(/(\w+) \+([0-9]+)/g)];
+        const savesMatch = [...saveString.matchAll(/(\w+) \+?(-?\d+)/g)];
 
         savesMatch.forEach((save) => {
             savesObject[Parser.shortenAbilities(save[1])] = Number(save[2]);
