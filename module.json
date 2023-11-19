@@ -9,7 +9,7 @@
   ],
   "compatibility": {
     "minimum": "10",
-    "verified": "10"
+    "verified": "11"
   },
   "url": "https://github.com/ZoltanTheDM/XML-foundry-import",
   "manifest": "https://raw.githubusercontent.com/ZoltanTheDM/XML-foundry-import/main/module.json",
@@ -27,8 +27,8 @@
         "id": "dnd5e",
         "type": "system",
         "compatibility": {
-          "minimum": "2.1.0",
-          "verified": "2.1.5"
+          "minimum": "2.4.0",
+          "verified": "2.4.0"
         }
       }
     ]

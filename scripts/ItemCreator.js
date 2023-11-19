@@ -1182,56 +1182,6 @@ class ItemCreator {
         rune: "rune",
     }
 
-    async MakeRaces(raceJson, compendiumCreator){
-        let racePack = await compendiumCreator("-race", "Item");
-
-        for (let raceData of raceJson){
-
-            let ds;
-
-            let text = raceData.trait.reduce((acc, trait) => {
-                if (trait.name == "Description"){
-                    ds = Parser.getDescriptionAndSource(trait.text);
-                    console.log(ds);
-
-                    //too lazy to fix earlier. Fixing here
-                    ds.description = ds.description.replace("<p></p>", "")
-
-                    if(ds.description){
-                        console.log(`hey there "${ds.description}"`)
-                        return `${acc}<p><em>${ds.description}</em></p><p><em><strong>Ability Score Increase.</strong></em> ${raceData.ability}</p>`;
-                    }
-                    else{
-                        return `${acc}<p><em><strong>Ability Score Increase.</strong></em> ${raceData.ability}</p>`;
-                    }
-                }
-                else{
-                    return `${acc}<p><em><strong>${trait.name}.</strong></em> ${trait.text}</p>`
-                }
-
-                return acc;
-            }, "");
-
-            console.log(ds);
-
-            let item = {
-                name: raceData.name,
-                type: "feat",
-                system: {
-                    description: {value: text},
-                    source: ds.source,
-                },
-            };
-
-            let itemTemp = await Item.create(item, {temporary: true, displaySheet:false});
-
-            await racePack.importDocument(itemTemp);
-            console.log(`Done importing ${item.name} into ${racePack.collection}`);
-
-        }
-
-    }
-
     static isObjEmpty (obj) {
         return Object.keys(obj).length === 0;
     }

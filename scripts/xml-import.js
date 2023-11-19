@@ -1,6 +1,7 @@
 import ActorCreator from "./ActorCreator.js";
 import ItemCreator from "./ItemCreator.js";
 import ClassCreator from "./ClassCreator.js";
+import RaceCreator from "./RaceCreator.js";
 import JournalCreator from "./JournalCreator.js";
 import Parser from './Parser.js'
 import Utilts from "./Utilts.js";
@@ -45,6 +46,7 @@ class XmlImporter extends Application
         features: html.find('[name=featuresButton]').is(':checked'),
         backgrounds: html.find('[name=backgroundsButton]').is(':checked'),
         races: html.find('[name=raceButton]').is(':checked'),
+        abilities: html.find('[name=abilitiesButton]').is(':checked'),
         items: html.find('[name=itemsButton]').is(':checked'),
         classes: html.find('[name=classButton]').is(':checked'),
         subclass: html.find('[name=subclassButton]').is(':checked'),
@@ -93,7 +95,7 @@ class XmlImporter extends Application
     }
 
     if (adder.races && wholeJson['race']){
-      await ItemCreator.MakeRaces(Utilts.ensureArray(wholeJson['race']), name => XmlImporter.getCompendiumWithType(compendiumName+name, "Item"));
+      await RaceCreator.MakeRaces(Utilts.ensureArray(wholeJson['race']), name => XmlImporter.getCompendiumWithType(compendiumName+name, "Item"), adder.abilities);
     }
 
     if (adder.items && wholeJson['item']){
