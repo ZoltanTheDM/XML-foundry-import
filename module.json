@@ -1,6 +1,6 @@
 {
   "title": "XML import",
-  "version": "0.9.1",
+  "version": "develop",
   "esmodules": [
     "scripts/xml-import.js"
   ],
@@ -12,8 +12,8 @@
     "verified": "11"
   },
   "url": "https://github.com/ZoltanTheDM/XML-foundry-import",
-  "manifest": "https://raw.githubusercontent.com/ZoltanTheDM/XML-foundry-import/main/module.json",
-  "download": "https://github.com/ZoltanTheDM/XML-foundry-import/archive/main.zip",
+  "manifest": "https://raw.githubusercontent.com/ZoltanTheDM/XML-foundry-import/develop/module.json",
+  "download": "https://github.com/ZoltanTheDM/XML-foundry-import/archive/develop.zip",
   "id": "xml-import",
   "authors": [
     {
